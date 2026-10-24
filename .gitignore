@@ -1,0 +1,7 @@
+# A planilha e as bases têm CPF/CNPJ e faturamento — NUNCA enviar ao GitHub (LGPD).
+# Só o resumo agregado docs/dados.js vai para o site.
+dados/
+bases/
+*.xlsx
+*.csv
+__pycache__/

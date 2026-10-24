@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Higienização de Rede 2.0</title>
+<style>
+  :root{--verde:#007A33;--verde2:#006B2D;--lima:#BBDD00;--creme:#F0EDE4;--tinta:#1d2a22;--suave:#5d6b62;--linha:#dcd8cc;--alerta:#9a5a00;--alerta-bg:#fde7c8;--div-bg:#e6e3f6;--ok-bg:#dff0e4}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--creme);color:var(--tinta);font-size:15px}
+  header{background:var(--verde);color:#fff;padding:14px 20px;border-bottom:4px solid var(--lima)}
+  header h1{margin:0;font-size:18px;font-weight:600}
+  header p{margin:2px 0 0;font-size:13px;opacity:.85}
+  main{max-width:1280px;margin:0 auto;padding:18px 16px 40px}
+  .card{background:#fff;border:1px solid var(--linha);border-radius:10px;padding:16px;margin-bottom:16px;min-width:0}
+  h2{font-size:16px;margin:0 0 12px;color:var(--verde2)}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+  .kpis .card{margin:0}
+  .kpi-r{font-size:13px;color:var(--suave)} .kpi-v{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums} .kpi-s{font-size:12px;color:var(--suave)}
+  .filtros{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+  .filtros label{font-size:12px;color:var(--suave);display:block}
+  select,input{font:inherit;padding:7px 9px;border:1px solid var(--linha);border-radius:6px;background:#fff;max-width:100%}
+  button{font:inherit;background:#fff;color:var(--verde2);border:1px solid var(--verde);border-radius:6px;padding:7px 12px;cursor:pointer}
+  .grade{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px}
+  @media(max-width:860px){.grade{grid-template-columns:1fr}}
+  @media(max-width:600px){.barra{grid-template-columns:30px minmax(0,1fr) 48px}.barra .vb{display:none}.filtros>div{flex:1 1 140px}.filtros select,.filtros input{width:100%}}
+  .barra{display:grid;grid-template-columns:30px minmax(0,1fr) 56px 120px;gap:8px;align-items:center;margin:7px 0;cursor:pointer}
+  .barra.ativo .tag{outline:2px solid var(--verde)}
+  .barra .desc{font-size:12.5px;color:var(--suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .trilho{height:9px;background:var(--creme);border-radius:5px}.trilho div{height:9px;background:var(--verde);border-radius:5px}
+  .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .tag{display:inline-block;min-width:24px;text-align:center;border-radius:4px;padding:1px 6px;font-weight:700;background:var(--creme)}
+  .tag.A{background:var(--ok-bg)}.tag.C,.tag.D,.tag.E,.tag.F{background:var(--alerta-bg)}.tag.G,.tag.H{background:var(--div-bg)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{background:var(--verde);color:#fff;text-align:left;padding:7px 8px;font-weight:600;cursor:pointer;white-space:nowrap}
+  td{padding:6px 8px;border-bottom:1px solid var(--linha)}
+  tr:nth-child(even) td{background:#faf9f5}
+  .rolagem{overflow-x:auto;max-height:520px;overflow-y:auto}
+  .rolagem th{position:sticky;top:0}
+  .classes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .classes div{background:var(--creme);border-radius:8px;padding:10px;text-align:center}
+  .classes b{display:block;font-size:22px}
+  .nota{font-size:12.5px;color:var(--suave)}
+  footer{font-size:12.5px;color:var(--suave);text-align:center;margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Higienização de Rede 2.0 · Ipasgo Saúde</h1>
+  <p>Painel de acompanhamento · GERAS / COGER · <span id="ref"></span></p>
+</header>
+<main>
+  <div class="card">
+    <div class="filtros">
+      <div><label for="fUF">UF</label><select id="fUF"></select></div>
+      <div><label for="fReg">Região de saúde</label><select id="fReg"></select></div>
+      <div><label for="fCat">Categoria</label><select id="fCat"></select></div>
+      <div><label for="fBloco">Bloco</label><select id="fBloco"></select></div>
+      <button id="limpar" type="button">Limpar filtros</button>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="card"><div class="kpi-r">Prestadores no filtro</div><div class="kpi-v" id="kTotal"></div><div class="kpi-s" id="kTotalS"></div></div>
+    <div class="card"><div class="kpi-r">Faturaram em 12 meses</div><div class="kpi-v" id="kFat"></div><div class="kpi-s" id="kFatS"></div></div>
+    <div class="card"><div class="kpi-r">Candidatos a descredenciamento (C–F)</div><div class="kpi-v" id="kCand" style="color:var(--alerta)"></div></div>
+    <div class="card"><div class="kpi-r">Divergências cadastrais (G+H)</div><div class="kpi-v" id="kDiv"></div></div>
+    <div class="card"><div class="kpi-r">Valor liberado em 12 meses</div><div class="kpi-v" id="kValor" style="font-size:20px"></div><div class="kpi-s" id="kValorS"></div></div>
+  </div>
+
+  <div class="grade">
+    <div class="card">
+      <h2>Prestadores por bloco de decisão</h2>
+      <div id="blocos"></div>
+      <p class="nota">Clique num bloco para filtrar. Valores em R$ só aparecem para grupos com 3 ou mais prestadores.</p>
+    </div>
+    <div>
+      <div class="card">
+        <h2>Rede na localidade dos candidatos (C–F)</h2>
+        <div class="classes" id="classes"></div>
+        <p class="nota">Considera só a rede que fatura (lente efetiva), no mesmo município e categoria. Único ou rede mínima exige substituto antes do descredenciamento (RN 567/2022 e RN 585/2023).</p>
+      </div>
+      <div class="card">
+        <h2>Referência — 1ª higienização (bases jan/fev 2026)</h2>
+        <div id="historico"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Por categoria</h2>
+    <div class="rolagem"><table id="tCat"></table></div>
+  </div>
+
+  <div class="card">
+    <h2>Por município</h2>
+    <div class="filtros" style="margin-bottom:10px">
+      <div><label for="fMun">Buscar município</label><input id="fMun" placeholder="Ex.: Anápolis"></div>
+    </div>
+    <div class="rolagem"><table id="tMun"></table></div>
+    <p class="nota">Esta tabela respeita os filtros de UF e região. Ela não é cruzada com categoria nem com bloco, para não expor prestadores individualmente.</p>
+  </div>
+
+  <footer id="rodape"></footer>
+</main>
+
+<script src="dados.js"></script>
+<script>
+(function () {
+  const D = window.DADOS;
+  const CAND = ["C", "D", "E", "F"], DIV = ["G", "H"];
+  const BLOCOS = Object.keys(D.legenda).sort();
+  const fmt = n => n.toLocaleString("pt-BR");
+  const brl = v => v == null ? "—" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const cubo = D.cubo.map(([uf, reg, cat, bloco, classe, n, fat]) => ({ uf, reg, cat, bloco, classe, n, fat }));
+  const muns = D.municipios.map(([uf, reg, mun, total, fat, cand, div]) => ({ uf, reg, mun, total, fat, cand, div }));
+  const f = { uf: "", reg: "", cat: "", bloco: "" };
+  const ordem = { cat: ["total", -1], mun: ["cand", -1] };
+
+  function opcoes(sel, valores, atual, rotulo) {
+    sel.innerHTML = `<option value="">${rotulo}</option>` +
+      valores.map(v => `<option${v === atual ? " selected" : ""}>${esc(v)}</option>`).join("");
+  }
+  const unicos = (lista, k) => [...new Set(lista.map(r => r[k]))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+  function montarFiltros() {
+    opcoes($("fUF"), unicos(cubo, "uf"), f.uf, "Todas");
+    opcoes($("fReg"), unicos(cubo.filter(r => !f.uf || r.uf === f.uf), "reg"), f.reg, "Todas");
+    opcoes($("fCat"), unicos(cubo, "cat"), f.cat, "Todas");
+    opcoes($("fBloco"), BLOCOS, f.bloco, "Todos");
+  }
+
+  const soma = (lista, k) => lista.reduce((s, r) => s + r[k], 0);
+
+  function render() {
+    const geo = cubo.filter(r => (!f.uf || r.uf === f.uf) && (!f.reg || r.reg === f.reg) && (!f.cat || r.cat === f.cat));
+    const sel = geo.filter(r => !f.bloco || r.bloco === f.bloco);
+    const total = soma(sel, "n"), fat = soma(sel, "fat");
+
+    $("kTotal").textContent = fmt(total);
+    $("kTotalS").textContent = `de ${fmt(D.total)} na rede analisada`;
+    $("kFat").textContent = fmt(fat);
+    $("kFatS").textContent = total ? `${(100 * fat / total).toFixed(1).replace(".", ",")}% do filtro` : "";
+    $("kCand").textContent = fmt(soma(sel.filter(r => CAND.includes(r.bloco)), "n"));
+    $("kDiv").textContent = fmt(soma(sel.filter(r => DIV.includes(r.bloco)), "n"));
+
+    // valor: disponível por bloco (geral) ou por região × bloco; não cruza com categoria
+    let valor = null, nota = "";
+    if (f.cat) { nota = "não detalhado por categoria"; }
+    else if (!f.uf && !f.reg) {
+      valor = D.valor_por_bloco.filter(r => !f.bloco || r.BLOCO === f.bloco).reduce((s, r) => r.v == null ? s : s + r.v, 0);
+    } else {
+      const linhas = D.valor_por_regiao_bloco.filter(r => (!f.uf || r.UF === f.uf) && (!f.reg || r.REGIAO_SAUDE === f.reg) && (!f.bloco || r.BLOCO === f.bloco));
+      valor = linhas.some(r => r.v != null) ? linhas.reduce((s, r) => r.v == null ? s : s + r.v, 0) : null;
+      if (linhas.some(r => r.v == null)) nota = valor == null ? "oculto: grupo com menos de 3 prestadores" : "grupos com menos de 3 prestadores omitidos";
+    }
+    $("kValor").textContent = valor == null ? "—" : brl(valor);
+    $("kValorS").textContent = nota;
+
+    // blocos
+    const porBloco = BLOCOS.map(b => ({ b, n: soma(geo.filter(r => r.bloco === b), "n") }));
+    const max = Math.max(1, ...porBloco.map(x => x.n));
+    const vb = Object.fromEntries(D.valor_por_bloco.map(r => [r.BLOCO, r.v]));
+    $("blocos").innerHTML = porBloco.map(({ b, n }) => `
+      <div class="barra${f.bloco === b ? " ativo" : ""}" data-b="${b}" title="${esc(D.legenda[b])}">
+        <span class="tag ${b}">${b}</span>
+        <div><div class="desc">${esc(D.legenda[b])}</div><div class="trilho"><div style="width:${(100 * n / max).toFixed(1)}%"></div></div></div>
+        <div class="num"><strong>${fmt(n)}</strong></div>
+        <div class="num vb" style="font-size:12.5px;color:var(--suave)">${!f.uf && !f.reg && !f.cat ? brl(vb[b]) : ""}</div>
+      </div>`).join("");
+    document.querySelectorAll(".barra").forEach(el => el.onclick = () => {
+      f.bloco = f.bloco === el.dataset.b ? "" : el.dataset.b; montarFiltros(); render();
+    });
+
+    // classes de rede dos candidatos
+    const cand = geo.filter(r => CAND.includes(r.bloco) && (!f.bloco || r.bloco === f.bloco));
+    const classes = [["ÚNICO NA LOCALIDADE", "Único"], ["ELE + 1 (REDE MÍNIMA)", "Ele + 1"], ["REDE SUFICIENTE", "Suficiente"]];
+    const semRede = soma(cand.filter(r => r.classe === "SEM REDE"), "n");
+    $("classes").innerHTML = classes.map(([k, rot]) => `<div><b>${fmt(soma(cand.filter(r => r.classe === k), "n"))}</b>${rot}</div>`).join("") +
+      (semRede ? `<div style="grid-column:1/-1"><b>${fmt(semRede)}</b>Sem nenhum prestador faturando na localidade</div>` : "");
+
+    // categorias
+    const cats = {};
+    sel.forEach(r => {
+      const c = cats[r.cat] ||= { cat: r.cat, total: 0, fat: 0, cand: 0, div: 0 };
+      c.total += r.n; c.fat += r.fat;
+      if (CAND.includes(r.bloco)) c.cand += r.n;
+      if (DIV.includes(r.bloco)) c.div += r.n;
+    });
+    tabela("tCat", Object.values(cats), "cat", [["cat", "Categoria"], ["total", "Prestadores"], ["fat", "Faturam"], ["cand", "Candidatos C–F"], ["div", "Divergências G+H"]]);
+
+    // municípios
+    const busca = $("fMun").value.trim().toLowerCase();
+    const ms = muns.filter(m => (!f.uf || m.uf === f.uf) && (!f.reg || m.reg === f.reg) && (!busca || m.mun.toLowerCase().includes(busca)));
+    tabela("tMun", ms, "mun", [["mun", "Município"], ["uf", "UF"], ["reg", "Região de saúde"], ["total", "Prestadores"], ["fat", "Faturam"], ["cand", "Candidatos C–F"], ["div", "Divergências G+H"]]);
+  }
+
+  function tabela(id, linhas, chaveOrdem, cols) {
+    const [k, dir] = ordem[chaveOrdem];
+    linhas.sort((a, b) => typeof a[k] === "number" ? dir * (a[k] - b[k]) : dir * String(a[k]).localeCompare(String(b[k]), "pt-BR"));
+    const tot = cols.map(([c]) => typeof (linhas[0] || {})[c] === "number" ? fmt(soma(linhas, c)) : "");
+    tot[0] = `<strong>Total (${fmt(linhas.length)})</strong>`;
+    $(id).innerHTML =
+      `<thead><tr>${cols.map(([c, r]) => `<th data-c="${c}" class="${typeof (linhas[0] || {})[c] === "number" ? "num" : ""}">${r}${c === k ? (dir < 0 ? " ▾" : " ▴") : ""}</th>`).join("")}</tr></thead>` +
+      `<tbody>${linhas.map(l => `<tr>${cols.map(([c]) => typeof l[c] === "number" ? `<td class="num">${fmt(l[c])}</td>` : `<td>${esc(l[c])}</td>`).join("")}</tr>`).join("") ||
+        `<tr><td colspan="${cols.length}">Nada encontrado com esses filtros.</td></tr>`}` +
+      `<tr>${tot.map((t, i) => `<td class="${i ? "num" : ""}"><strong>${t}</strong></td>`).join("")}</tr></tbody>`;
+    $(id).querySelectorAll("th").forEach(th => th.onclick = () => {
+      const c = th.dataset.c;
+      ordem[chaveOrdem] = [c, ordem[chaveOrdem][0] === c ? -ordem[chaveOrdem][1] : (typeof (linhas[0] || {})[c] === "number" ? -1 : 1)];
+      render();
+    });
+  }
+
+  function historico() {
+    const h = D.historico;
+    $("historico").innerHTML = `
+      <p style="margin:0 0 8px"><strong>${fmt(h.afetados)}</strong> prestadores afetados de uma base de <strong>${fmt(h.base_inicial)}</strong>.</p>
+      <table><thead><tr><th>Onda</th><th class="num">Total</th><th class="num">Descredenciados</th><th class="num">Mantidos</th></tr></thead><tbody>
+      ${h.ondas.map(o => `<tr><td>${o.onda}</td><td class="num">${fmt(o.total)}</td><td class="num">${fmt(o.descredenciados)}</td><td class="num">${fmt(o.mantidos)}</td></tr>`).join("")}
+      </tbody></table>
+      <p class="nota">${fmt(h.desconsiderados_estrategicos)} desconsiderados por questões estratégicas.</p>`;
+  }
+
+  ["fUF", "fReg", "fCat", "fBloco"].forEach(id => $(id).onchange = () => {
+    f.uf = $("fUF").value; f.reg = id === "fUF" ? "" : $("fReg").value; f.cat = $("fCat").value; f.bloco = $("fBloco").value;
+    montarFiltros(); render();
+  });
+  $("fMun").oninput = render;
+  $("limpar").onclick = () => { Object.keys(f).forEach(k => f[k] = ""); $("fMun").value = ""; montarFiltros(); render(); };
+
+  $("ref").textContent = `bases de ${D.data_referencia}`;
+  $("rodape").textContent = `Dados agregados da planilha consolidada (referência ${D.data_referencia}) · atualizado em ${D.gerado_em} · sem dados pessoais de prestadores`;
+  montarFiltros(); historico(); render();
+})();
+</script>
+</body>
+</html>
