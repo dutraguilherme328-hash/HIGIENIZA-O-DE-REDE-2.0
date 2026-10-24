@@ -18,6 +18,35 @@ Regras de proteção aplicadas em `gerar_dados_site.py`:
 - **Municípios** aparecem só com totais, sem cruzar com categoria nem com bloco.
 - **Valores em R$** aparecem só por bloco e por região, e somente para grupos com 3 ou mais prestadores.
 
+## Mapa da rede e RN 566/2022
+
+O mapa cobre Goiás (246 municípios, 18 regiões de saúde da SES-GO) e o DF. Ele tem dois modos:
+
+**Camadas:** municípios ou regiões de saúde. Na camada de regiões, clicar numa região filtra o painel inteiro por ela.
+
+**Indicadores:**
+- Mapa de calor de prestadores na rede, de prestadores que faturam ou de candidatos C–F.
+- **Cobertura RN 566** de hoje e após descredenciar os candidatos C–F, por categoria. Cada município recebe um nível:
+  1. no município;
+  2. só em limítrofe;
+  3. só na região de saúde, com transporte custeado;
+  4. fora da região, com transporte de ida e volta;
+  5. sem rede em GO/DF.
+- **Impacto:** destaca os municípios onde a cobertura piora e lista as categorias mais afetadas.
+
+Ao clicar num município, aparecem a região, os limítrofes com rede, o nível em três lentes (hoje, após o descredenciamento e só a rede que fatura) e um alerta quando o descredenciamento piora a garantia.
+
+A base geográfica fica em `scripts/` e só precisa ser refeita se mudar a malha ou as regiões:
+```bat
+pip install shapely
+python scripts\preparar_mapa.py
+```
+Esse comando gera `scripts/base_geografica.json`, com região e limítrofes, e `docs/mapa.js`, com os contornos.
+
+**Fontes:**
+- Malha municipal do IBGE, obtida via github.com/tbrugz/geodata-br. A geometria inválida de Mineiros e Sítio d'Abadia foi corrigida.
+- Regiões de saúde: SES-GO (goias.gov.br/saude/regioes-de-saude-planejamento).
+
 ## Publicar pela primeira vez
 
 1. No GitHub, clique em **New repository** e dê um nome, por exemplo `painel-higienizacao`.
@@ -54,4 +83,7 @@ Abra `docs/index.html` no navegador. Funciona sem servidor.
 - **O site e o repositório são públicos.** Qualquer pessoa com o link vê os números agregados. O site pede para não ser indexado por buscadores, mas não tem login.
 - Não há lista nem detalhe de prestador. Para isso, use a planilha ou o painel Django (VRS 2).
 - A tabela de municípios não cruza com categoria nem com bloco, por proteção.
+- O mapa de cobertura mostra o **nível** por município × categoria, sem contagens. Ainda assim, quem conhece a rede local pode deduzir onde há candidatos. Avalie isso antes de divulgar o link.
+- A cobertura é medida por categoria do BI CODER, sem especialidade médica, e não considera prestadores fora da rede nem prazos de atendimento.
+- O mapa cobre só GO e DF. Prestadores de outras UFs ficam fora dele.
 - A atualização depende de rodar o `atualizar_site.bat` num computador com a planilha.

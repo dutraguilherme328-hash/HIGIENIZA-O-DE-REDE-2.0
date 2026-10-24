@@ -1,0 +1,20 @@
+# Regiões de saúde de Goiás — fonte: SES-GO, https://goias.gov.br/saude/regioes-de-saude-planejamento/
+# Formato: REGIÃO: município; município; ...   (o DF entra como região própria DISTRITO FEDERAL)
+CENTRAL: Abadia de Goiás; Anicuns; Araçu; Avelinópolis; Brazabrantes; Campestre de Goiás; Caturaí; Damolândia; Goiânia; Goianira; Guapó; Inhumas; Itaguari; Itauçu; Jesúpolis; Nazário; Nerópolis; Nova Veneza; Ouro Verde de Goiás; Petrolina de Goiás; Santa Bárbara de Goiás; Santa Rosa de Goiás; Santo Antônio de Goiás; São Francisco de Goiás; Taquaral de Goiás; Trindade
+OESTE I: Amorinópolis; Aragarças; Arenópolis; Baliza; Bom Jardim de Goiás; Diorama; Fazenda Nova; Iporá; Israelândia; Ivolândia; Jaupaci; Moiporá; Montes Claros de Goiás; Novo Brasil; Palestina de Goiás; Piranhas
+OESTE II: Adelândia; Aurilândia; Buriti de Goiás; Cachoeira de Goiás; Córrego do Ouro; Firminópolis; Palmeiras de Goiás; Palminópolis; Paraúna; São João da Paraúna; São Luís de Montes Belos; Sanclerlândia; Turvânia
+RIO VERMELHO: Americano do Brasil; Araguapaz; Aruanã; Britânia; Faina; Goiás; Guaraíta; Heitoraí; Itaberaí; Itapirapuã; Itapuranga; Jussara; Matrinchã; Mossâmedes; Mozarlândia; Nova Crixás; Santa Fé de Goiás
+NORTE: Bonópolis; Campinaçu; Estrela do Norte; Formoso; Minaçu; Montividiu do Norte; Mundo Novo; Mutunópolis; Novo Planalto; Porangatu; Santa Tereza de Goiás; São Miguel do Araguaia; Trombas
+PIRINEUS: Abadiânia; Alexânia; Anápolis; Campo Limpo de Goiás; Cocalzinho de Goiás; Corumbá de Goiás; Gameleira de Goiás; Goianápolis; Pirenópolis; Terezópolis de Goiás
+SÃO PATRÍCIO I: Campos Verdes; Carmo do Rio Verde; Ceres; Crixás; Guarinos; Ipiranga de Goiás; Itapaci; Morro Agudo de Goiás; Nova América; Nova Glória; Pilar de Goiás; Rialma; Rianápolis; Rubiataba; Santa Isabel; São Luiz do Norte; São Patrício; Santa Terezinha de Goiás; Uirapuru; Uruana
+SÃO PATRÍCIO II: Barro Alto; Goianésia; Itaguaru; Jaraguá; Mimoso de Goiás; Padre Bernardo; Santa Rita do Novo Destino; Vila Propício
+SERRA DA MESA: Alto Horizonte; Amaralina; Campinorte; Colinas do Sul; Hidrolina; Mara Rosa; Niquelândia; Nova Iguaçu de Goiás; Uruaçu
+CENTRO SUL: Aparecida de Goiânia; Aragoiânia; Bela Vista de Goiás; Bonfinópolis; Caldazinha; Cezarina; Cristianópolis; Cromínia; Edealina; Edéia; Hidrolândia; Indiara; Jandaia; Leopoldo de Bulhões; Mairipotaba; Orizona; Piracanjuba; Pontalina; Professor Jamil; São Miguel do Passa Quatro; Senador Canedo; Silvânia; Varjão; Vianópolis; Vicentinópolis
+ESTRADA DE FERRO: Anhanguera; Caldas Novas; Campo Alegre de Goiás; Catalão; Corumbaíba; Cumari; Davinópolis; Goiandira; Ipameri; Marzagão; Nova Aurora; Ouvidor; Palmelo; Pires do Rio; Rio Quente; Santa Cruz de Goiás; Três Ranchos; Urutaí
+SUL: Água Limpa; Aloândia; Bom Jesus de Goiás; Buriti Alegre; Cachoeira Dourada; Goiatuba; Gouvelândia; Inaciolândia; Itumbiara; Joviânia; Morrinhos; Panamá
+ENTORNO NORTE: Água Fria de Goiás; Alto Paraíso de Goiás; Cabeceiras; Flores de Goiás; Formosa; Planaltina; São João d'Aliança; Vila Boa
+ENTORNO SUL: Águas Lindas de Goiás; Cidade Ocidental; Cristalina; Luziânia; Novo Gama; Santo Antônio do Descoberto; Valparaíso de Goiás
+NORDESTE I: Campos Belos; Cavalcante; Divinópolis de Goiás; Monte Alegre de Goiás; Teresina de Goiás
+NORDESTE II: Alvorada do Norte; Buritinópolis; Damianópolis; Guarani de Goiás; Iaciara; Mambaí; Nova Roma; Posse; São Domingos; Simolândia; Sítio d'Abadia
+SUDOESTE I: Acreúna; Aparecida do Rio Doce; Cachoeira Alta; Caçu; Castelândia; Itajá; Itarumã; Lagoa Santa; Maurilândia; Montividiu; Paranaiguara; Porteirão; Quirinópolis; Rio Verde; São Simão; Santa Helena de Goiás; Santo Antônio da Barra; Turvelândia
+SUDOESTE II: Aporé; Caiapônia; Chapadão do Céu; Doverlândia; Jataí; Mineiros; Perolândia; Portelândia; Serranópolis; Santa Rita do Araguaia

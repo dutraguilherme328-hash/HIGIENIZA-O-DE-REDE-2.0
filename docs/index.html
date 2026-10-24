@@ -43,6 +43,34 @@
   .classes b{display:block;font-size:22px}
   .nota{font-size:12.5px;color:var(--suave)}
   footer{font-size:12.5px;color:var(--suave);text-align:center;margin-top:8px}
+  .mapa-grade{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:18px}
+  @media(max-width:900px){.mapa-grade{grid-template-columns:1fr}}
+  @media(max-width:600px){.mapa-ctrl>div{flex:1 1 100%}.mapa-ctrl select{width:100%}#mapa text{font-size:16px}}
+  .mapa-ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:10px}
+  .mapa-ctrl label{font-size:12px;color:var(--suave);display:block}
+  .seg{display:inline-flex;border:1px solid var(--verde);border-radius:6px;overflow:hidden}
+  .seg button{border:0;border-radius:0;padding:7px 12px}
+  .seg button.on{background:var(--verde);color:#fff}
+  .mapa-svg{position:relative}
+  #mapa{width:100%;height:auto;display:block;background:#f7f6f1;border-radius:8px}
+  #mapa .m{stroke:#fff;stroke-width:.6;cursor:pointer;transition:opacity .15s}
+  #mapa .m:hover{stroke:var(--tinta);stroke-width:1.4}
+  #mapa .r{fill:none;stroke:#3b4a40;stroke-width:1.2;pointer-events:none}
+  #mapa.camada-reg .r{stroke-width:2.2}
+  #mapa .r-fill{stroke:#fff;stroke-width:1.5;cursor:pointer}
+  #mapa .sel{stroke:var(--tinta)!important;stroke-width:2.6!important}
+  #mapa .apagado{opacity:.25}
+  #mapa text{font-size:12px;font-weight:600;fill:#1d2a22;paint-order:stroke;stroke:#fff;stroke-width:3px;pointer-events:none}
+  .dica{position:absolute;pointer-events:none;background:#1d2a22;color:#fff;font-size:12.5px;padding:6px 9px;border-radius:6px;max-width:240px;z-index:2;line-height:1.35}
+  .legenda{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;margin-top:8px;align-items:center}
+  .legenda i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+  .sel-box{background:var(--creme);border-radius:8px;padding:12px;margin-bottom:12px;font-size:13.5px}
+  .sel-box h3{margin:0 0 6px;font-size:15px}
+  .nivel{display:inline-block;border-radius:4px;padding:1px 7px;font-size:12px;font-weight:600;color:#fff}
+  .lista-piora{max-height:220px;overflow-y:auto;font-size:13px;margin:0;padding:0;list-style:none}
+  .lista-piora li{padding:4px 0;border-bottom:1px solid var(--linha);cursor:pointer}
+  .lista-piora li:hover{color:var(--verde2)}
+  .mini{width:100%;font-size:13px}.mini td,.mini th{padding:4px 6px}
 </style>
 </head>
 <body>
@@ -67,6 +95,37 @@
     <div class="card"><div class="kpi-r">Candidatos a descredenciamento (C–F)</div><div class="kpi-v" id="kCand" style="color:var(--alerta)"></div></div>
     <div class="card"><div class="kpi-r">Divergências cadastrais (G+H)</div><div class="kpi-v" id="kDiv"></div></div>
     <div class="card"><div class="kpi-r">Valor liberado em 12 meses</div><div class="kpi-v" id="kValor" style="font-size:20px"></div><div class="kpi-s" id="kValorS"></div></div>
+  </div>
+
+  <div class="card" id="cardMapa">
+    <h2>Mapa da rede e garantia de atendimento (RN 566/2022)</h2>
+    <div class="mapa-grade">
+      <div class="mapa-area">
+        <div class="mapa-ctrl">
+          <div class="seg" role="group" aria-label="Camada">
+            <button type="button" data-camada="mun" class="on">Municípios</button>
+            <button type="button" data-camada="reg">Regiões de saúde</button>
+          </div>
+          <div><label for="mInd">Indicador</label>
+            <select id="mInd">
+              <option value="cad">Prestadores na rede (mapa de calor)</option>
+              <option value="fat">Prestadores que faturam (mapa de calor)</option>
+              <option value="cand">Candidatos a descredenciamento C–F (mapa de calor)</option>
+              <option value="cob0">Cobertura RN 566 — hoje</option>
+              <option value="cob1" selected>Cobertura RN 566 — após descredenciar C–F</option>
+              <option value="imp">Impacto — onde a cobertura piora</option>
+            </select></div>
+          <div id="mCatBox"><label for="mCat">Categoria</label><select id="mCat"></select></div>
+        </div>
+        <div class="mapa-svg"><svg id="mapa" role="img" aria-label="Mapa de Goiás e Distrito Federal"></svg><div id="dica" class="dica" hidden></div></div>
+        <div id="legenda" class="legenda"></div>
+      </div>
+      <div class="mapa-lado">
+        <div id="painelSel" class="sel-box"></div>
+        <div id="impacto"></div>
+      </div>
+    </div>
+    <p class="nota">Ordem de garantia da RN 566/2022: sem prestador no município, o atendimento vai para um município limítrofe; depois, para outro município da região de saúde, com transporte custeado pela operadora (art. 4º, §2º); por último, para fora da região, com transporte de ida e volta. A cobertura considera a rede credenciada do BI CODER por categoria, sem especialidade. A lente "só quem fatura" aparece no detalhe de cada município.</p>
   </div>
 
   <div class="grade">
@@ -106,6 +165,7 @@
 </main>
 
 <script src="dados.js"></script>
+<script src="mapa.js"></script>
 <script>
 (function () {
   const D = window.DADOS;
@@ -196,6 +256,205 @@
     const busca = $("fMun").value.trim().toLowerCase();
     const ms = muns.filter(m => (!f.uf || m.uf === f.uf) && (!f.reg || m.reg === f.reg) && (!busca || m.mun.toLowerCase().includes(busca)));
     tabela("tMun", ms, "mun", [["mun", "Município"], ["uf", "UF"], ["reg", "Região de saúde"], ["total", "Prestadores"], ["fat", "Faturam"], ["cand", "Candidatos C–F"], ["div", "Divergências G+H"]]);
+    renderMapa();
+  }
+
+  // ------------------------------------------------------------------ MAPA
+  const M = window.MAPA;
+  const GEO = D.geo.map(([ibge, nome, uf, reg, viz], i) => ({ i, ibge, nome, uf, reg, viz }));
+  const CONT = {};
+  D.municipios.forEach(([uf, reg, mun, total, fat, cand, div, ibge]) => { if (ibge) CONT[ibge] = { total, fat, cand, div }; });
+  const contMun = g => CONT[g.ibge] || { total: 0, fat: 0, cand: 0, div: 0 };
+  const REGIOES = [...new Set(GEO.map(g => g.reg))];
+  const NIVEIS = {
+    1: ["No município", "#007A33", "Há prestador no próprio município: atendimento garantido no local."],
+    2: ["Só em limítrofe", "#9ccf5b", "Sem prestador no município: o atendimento vai para município limítrofe."],
+    3: ["Só na região de saúde", "#f2b84b", "Nem no município nem nos limítrofes: atendimento em outro município da região de saúde, com transporte custeado pela operadora."],
+    4: ["Fora da região", "#d9534f", "Sem prestador na região de saúde: atendimento fora dela, com transporte de ida e volta custeado."],
+    0: ["Sem rede em GO/DF", "#8f8a80", "Nenhum prestador da categoria em Goiás ou no DF."],
+  };
+  const CALOR = { cad: ["#eef3dc", "#cfe6a2", "#93c873", "#4a9d55", "#007A33"], fat: ["#eef3dc", "#cfe6a2", "#93c873", "#4a9d55", "#007A33"],
+                  cand: ["#fbe9d2", "#f6c98e", "#eb9a48", "#c96a1f", "#8f4508"] };
+  const VAZIO = "#e2ded3";
+  const ROTULO_IND = { cad: "prestadores na rede", fat: "prestadores que faturam", cand: "candidatos C–F" };
+  const mapa = { camada: "mun", ind: "cob1", cat: "", sel: null };
+  const ACENTOS = { "SAO PATRICIO I": "São Patrício I", "SAO PATRICIO II": "São Patrício II" };
+  const titulo = s => ACENTOS[s] || s.toLowerCase().split(" ")
+    .map(p => /^(i|ii|iii|iv)$/.test(p) ? p.toUpperCase() : ["de", "da", "do", "das", "dos"].includes(p) ? p : p.charAt(0).toUpperCase() + p.slice(1))
+    .join(" ");
+
+  function nivelDe(g, k) { const c = D.cobertura[mapa.cat]; return c ? +c[k][g.i] : 0; }
+  function faixas(valores) {  // 5 faixas por quantis dos valores > 0
+    const v = valores.filter(x => x > 0).sort((a, b) => a - b);
+    if (!v.length) return [1, 1, 1, 1];
+    return [0.2, 0.4, 0.6, 0.8].map(q => v[Math.min(v.length - 1, Math.floor(q * v.length))]);
+  }
+  const corCalor = (x, lim, pal) => x <= 0 ? VAZIO : pal[lim.filter(l => x > l).length];
+
+  function montarMapa() {
+    const cats = Object.keys(D.cobertura).sort((a, b) => a.localeCompare(b, "pt-BR"));
+    $("mCat").innerHTML = cats.map(c => `<option>${esc(c)}</option>`).join("");
+    mapa.cat = cats.includes("MEDICO") ? "MEDICO" : cats[0];
+    $("mCat").value = mapa.cat;
+    const svg = $("mapa");
+    svg.setAttribute("viewBox", `0 0 ${M.largura} ${M.altura}`);
+    svg.innerHTML =
+      `<g id="gMun">${GEO.map(g => `<path class="m" data-i="${g.i}" d="${M.municipios[g.ibge].d}"/>`).join("")}</g>` +
+      `<g id="gRegF">${REGIOES.map((r, j) => `<path class="r-fill" data-r="${j}" d="${M.regioes[r].d}"/>`).join("")}</g>` +
+      `<g id="gReg">${REGIOES.map(r => `<path class="r" d="${M.regioes[r].d}"/>`).join("")}</g>` +
+      `<g id="gRot">${REGIOES.map(r => `<text x="${M.regioes[r].c[0]}" y="${M.regioes[r].c[1]}" text-anchor="middle">${esc(titulo(r))}</text>`).join("")}</g>`;
+    svg.addEventListener("mousemove", ev => {
+      const t = ev.target, dica = $("dica");
+      if (!t.dataset || (t.dataset.i === undefined && t.dataset.r === undefined)) { dica.hidden = true; return; }
+      dica.innerHTML = t.dataset.i !== undefined ? textoMun(GEO[+t.dataset.i]) : textoReg(REGIOES[+t.dataset.r]);
+      const box = svg.parentNode.getBoundingClientRect();
+      let x = ev.clientX - box.left + 14, y = ev.clientY - box.top + 14;
+      dica.hidden = false;
+      if (x + dica.offsetWidth > box.width) x = ev.clientX - box.left - dica.offsetWidth - 10;
+      dica.style.left = x + "px"; dica.style.top = y + "px";
+    });
+    svg.addEventListener("mouseleave", () => $("dica").hidden = true);
+    svg.addEventListener("click", ev => {
+      const t = ev.target;
+      if (t.dataset.i !== undefined) { mapa.sel = { tipo: "mun", i: +t.dataset.i }; renderMapa(); }
+      else if (t.dataset.r !== undefined) {
+        const r = REGIOES[+t.dataset.r], uf = GEO.find(g => g.reg === r).uf;
+        mapa.sel = { tipo: "reg", r };
+        f.uf = uf; f.reg = r; montarFiltros(); render();
+      }
+    });
+    document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
+      mapa.camada = b.dataset.camada;
+      document.querySelectorAll(".seg button").forEach(x => x.classList.toggle("on", x === b));
+      renderMapa();
+    });
+    $("mInd").onchange = () => { mapa.ind = $("mInd").value; renderMapa(); };
+    $("mCat").onchange = () => { mapa.cat = $("mCat").value; renderMapa(); };
+  }
+
+  function textoMun(g) {
+    const c = contMun(g);
+    let t = `<strong>${esc(g.nome)}</strong> · ${esc(titulo(g.reg))}<br>${fmt(c.total)} na rede · ${fmt(c.fat)} faturam · ${fmt(c.cand)} candidatos`;
+    if (mapa.ind.startsWith("cob") || mapa.ind === "imp") {
+      const a = nivelDe(g, 0), d = nivelDe(g, 1);
+      t += `<br>${esc(mapa.cat)}: ${NIVEIS[a][0]}${a !== d ? " → " + NIVEIS[d][0] : ""}`;
+    }
+    return t;
+  }
+  function textoReg(r) {
+    const gs = GEO.filter(g => g.reg === r), s = k => gs.reduce((x, g) => x + contMun(g)[k], 0);
+    return `<strong>Região ${esc(titulo(r))}</strong><br>${gs.length} municípios · ${fmt(s("total"))} na rede · ${fmt(s("cand"))} candidatos`;
+  }
+
+  function renderMapa() {
+    if (!M || !D.cobertura) return;
+    const svg = $("mapa"), ind = mapa.ind, cob = ind.startsWith("cob") || ind === "imp";
+    $("mCatBox").style.display = cob ? "" : "none";
+    svg.classList.toggle("camada-reg", mapa.camada === "reg");
+    const filtroAtivo = g => (!f.uf || g.uf === f.uf) && (!f.reg || g.reg === f.reg);
+    const regFill = mapa.camada === "reg" && !cob;
+    $("gRegF").style.display = regFill ? "" : "none";
+    $("gRot").style.display = mapa.camada === "reg" ? "" : "none";
+
+    let legenda = "";
+    if (!cob) {
+      const pal = CALOR[ind];
+      const valor = mapa.camada === "reg"
+        ? Object.fromEntries(REGIOES.map(r => [r, GEO.filter(g => g.reg === r).reduce((s, g) => s + contMun(g)[ind === "cad" ? "total" : ind], 0)]))
+        : null;
+      const vals = mapa.camada === "reg" ? Object.values(valor) : GEO.map(g => contMun(g)[ind === "cad" ? "total" : ind]);
+      const lim = faixas(vals);
+      if (mapa.camada === "reg") {
+        document.querySelectorAll("#gRegF path").forEach(p => {
+          const r = REGIOES[+p.dataset.r];
+          p.setAttribute("fill", corCalor(valor[r], lim, pal));
+          p.classList.toggle("apagado", !!f.reg && f.reg !== r || !!f.uf && GEO.find(g => g.reg === r).uf !== f.uf);
+          p.classList.toggle("sel", mapa.sel && mapa.sel.tipo === "reg" && mapa.sel.r === r);
+        });
+      }
+      document.querySelectorAll("#gMun path").forEach(p => {
+        const g = GEO[+p.dataset.i];
+        p.setAttribute("fill", corCalor(contMun(g)[ind === "cad" ? "total" : ind], lim, pal));
+        p.classList.toggle("apagado", !filtroAtivo(g));
+        p.classList.toggle("sel", !!mapa.sel && mapa.sel.tipo === "mun" && mapa.sel.i === g.i);
+      });
+      const ini = [1, ...lim.map(l => l + 1)], fim = [...lim, Math.max(...vals)];
+      legenda = `<span><i style="background:${VAZIO}"></i>0</span>` +
+        pal.map((c, k) => ini[k] <= fim[k] ? `<span><i style="background:${c}"></i>${fmt(ini[k])}${fim[k] > ini[k] ? "–" + fmt(fim[k]) : ""}</span>` : "").join("") +
+        `<span style="color:var(--suave)">${ROTULO_IND[ind]} por ${mapa.camada === "reg" ? "região" : "município"}</span>`;
+    } else {
+      document.querySelectorAll("#gMun path").forEach(p => {
+        const g = GEO[+p.dataset.i], a = nivelDe(g, 0), d = nivelDe(g, 1);
+        let cor;
+        if (ind === "cob0") cor = NIVEIS[a][1];
+        else if (ind === "cob1") cor = NIVEIS[d][1];
+        else cor = d !== a ? NIVEIS[d][1] : VAZIO;
+        p.setAttribute("fill", cor);
+        p.classList.toggle("apagado", !filtroAtivo(g));
+        p.classList.toggle("sel", !!mapa.sel && mapa.sel.tipo === "mun" && mapa.sel.i === g.i);
+      });
+      legenda = [1, 2, 3, 4, 0].map(n => `<span><i style="background:${NIVEIS[n][1]}"></i>${NIVEIS[n][0]}</span>`).join("") +
+        (ind === "imp" ? `<span><i style="background:${VAZIO}"></i>Sem mudança</span><span style="color:var(--suave)">cor = nível após descredenciar</span>` : "");
+    }
+    $("legenda").innerHTML = legenda;
+    renderSelecao();
+    renderImpacto();
+  }
+
+  function linhaNivel(rotulo, n) {
+    return `<div style="margin:3px 0">${rotulo}: <span class="nivel" style="background:${NIVEIS[n][1]}">${NIVEIS[n][0]}</span></div>`;
+  }
+
+  function renderSelecao() {
+    const box = $("painelSel"), s = mapa.sel;
+    if (!s) { box.innerHTML = `<h3>Clique no mapa</h3>Clique num município para ver a rede e o nível de garantia de atendimento. Na camada de regiões, o clique filtra o painel pela região.`; return; }
+    if (s.tipo === "reg") {
+      const gs = GEO.filter(g => g.reg === s.r), sm = k => gs.reduce((x, g) => x + contMun(g)[k], 0);
+      const semRede = gs.filter(g => nivelDe(g, 0) !== 1).length, semDepois = gs.filter(g => nivelDe(g, 1) !== 1).length;
+      box.innerHTML = `<h3>Região ${esc(titulo(s.r))}</h3>${gs.length} municípios · ${fmt(sm("total"))} prestadores na rede · ${fmt(sm("fat"))} faturam · ${fmt(sm("cand"))} candidatos C–F
+        <div style="margin-top:6px">${esc(mapa.cat)}: ${semRede} município(s) sem prestador no próprio município hoje; ${semDepois} após descredenciar.</div>
+        <div style="margin-top:6px"><button type="button" id="limparReg">Ver todo o estado</button></div>`;
+      $("limparReg").onclick = () => { mapa.sel = null; f.uf = ""; f.reg = ""; montarFiltros(); render(); };
+      return;
+    }
+    const g = GEO[s.i], c = contMun(g), a = nivelDe(g, 0), d = nivelDe(g, 1), e = nivelDe(g, 2);
+    const vizRede = g.viz.map(v => GEO[v]).filter(v => nivelDe(v, 1) === 1).map(v => v.nome);
+    box.innerHTML = `<h3>${esc(g.nome)} · ${g.uf}</h3>
+      <div style="color:var(--suave);margin-bottom:6px">Região de saúde ${esc(titulo(g.reg))} · ${g.viz.length} município(s) limítrofe(s)</div>
+      ${fmt(c.total)} prestadores na rede · ${fmt(c.fat)} faturam · ${fmt(c.cand)} candidatos C–F · ${fmt(c.div)} divergências
+      <div style="margin-top:8px;font-weight:600">${esc(mapa.cat)}</div>
+      ${linhaNivel("Hoje", a)}${linhaNivel("Após descredenciar C–F", d)}${linhaNivel("Só rede que fatura", e)}
+      <div style="margin-top:6px">${NIVEIS[d][2]}</div>
+      ${d === 2 ? `<div style="margin-top:6px">Limítrofes com rede: ${vizRede.map(esc).join(", ")}</div>` : ""}
+      ${d > a ? `<div style="margin-top:6px;color:#a3261b;font-weight:600">O descredenciamento piora a garantia neste município. Confirme substituto antes (RN 567/2022 e RN 585/2023).</div>` : ""}`;
+  }
+
+  function renderImpacto() {
+    const gs = GEO.filter(g => (!f.uf || g.uf === f.uf) && (!f.reg || g.reg === f.reg));
+    const cont = k => [1, 2, 3, 4, 0].map(n => gs.filter(g => nivelDe(g, k) === n).length);
+    const antes = cont(0), depois = cont(1);
+    const piora = gs.filter(g => nivelDe(g, 1) > nivelDe(g, 0) || (nivelDe(g, 1) === 0 && nivelDe(g, 0) !== 0))
+      .sort((x, y) => nivelDe(y, 1) - nivelDe(x, 1) || x.nome.localeCompare(y.nome, "pt-BR"));
+    const ranking = Object.entries(D.cobertura).map(([cat, [a, d]]) => {
+      let n = 0; for (const g of gs) if (+d[g.i] > +a[g.i] || (d[g.i] === "0" && a[g.i] !== "0")) n++;
+      return [cat, n];
+    }).filter(x => x[1] > 0).sort((x, y) => y[1] - x[1]).slice(0, 6);
+    const area = f.reg ? `região ${titulo(f.reg)}` : f.uf ? f.uf : "GO e DF";
+    $("impacto").innerHTML = `
+      <h3 style="font-size:15px;margin:0 0 6px">Impacto em ${esc(mapa.cat)} · ${esc(area)}</h3>
+      <table class="mini"><thead><tr><th>Nível de garantia</th><th class="num">Hoje</th><th class="num">Após</th></tr></thead><tbody>
+      ${[1, 2, 3, 4, 0].map((n, k) => antes[k] || depois[k] ? `<tr><td><i style="display:inline-block;width:11px;height:11px;border-radius:2px;background:${NIVEIS[n][1]};margin-right:5px"></i>${NIVEIS[n][0]}</td><td class="num">${antes[k]}</td><td class="num">${depois[k]}${depois[k] !== antes[k] ? (depois[k] > antes[k] ? " ▲" : " ▼") : ""}</td></tr>` : "").join("")}
+      </tbody></table>
+      <p style="margin:10px 0 4px;font-size:13.5px"><strong>${piora.length}</strong> município(s) pioram de nível:</p>
+      <ul class="lista-piora">${piora.map(g => `<li data-i="${g.i}">${esc(g.nome)} — ${NIVEIS[nivelDe(g, 0)][0]} → <strong>${NIVEIS[nivelDe(g, 1)][0]}</strong></li>`).join("") || "<li>Nenhum.</li>"}</ul>
+      ${ranking.length ? `<p style="margin:12px 0 4px;font-size:13.5px"><strong>Categorias com mais municípios afetados</strong></p>
+      <table class="mini"><tbody>${ranking.map(([c, n]) => `<tr data-cat="${esc(c)}" style="cursor:pointer"><td>${esc(c)}</td><td class="num">${n}</td></tr>`).join("")}</tbody></table>` : ""}`;
+    document.querySelectorAll(".lista-piora li[data-i]").forEach(li => li.onclick = () => { mapa.sel = { tipo: "mun", i: +li.dataset.i }; renderMapa(); });
+    document.querySelectorAll("#impacto tr[data-cat]").forEach(tr => tr.onclick = () => {
+      mapa.cat = tr.dataset.cat; $("mCat").value = mapa.cat;
+      if (!mapa.ind.startsWith("cob") && mapa.ind !== "imp") { mapa.ind = "imp"; $("mInd").value = "imp"; }
+      renderMapa();
+    });
   }
 
   function tabela(id, linhas, chaveOrdem, cols) {
@@ -230,10 +489,11 @@
     montarFiltros(); render();
   });
   $("fMun").oninput = render;
-  $("limpar").onclick = () => { Object.keys(f).forEach(k => f[k] = ""); $("fMun").value = ""; montarFiltros(); render(); };
+  $("limpar").onclick = () => { Object.keys(f).forEach(k => f[k] = ""); $("fMun").value = ""; mapa.sel = null; montarFiltros(); render(); };
 
   $("ref").textContent = `bases de ${D.data_referencia}`;
   $("rodape").textContent = `Dados agregados da planilha consolidada (referência ${D.data_referencia}) · atualizado em ${D.gerado_em} · sem dados pessoais de prestadores`;
+  if (M && D.cobertura) montarMapa(); else $("cardMapa").hidden = true;
   montarFiltros(); historico(); render();
 })();
 </script>

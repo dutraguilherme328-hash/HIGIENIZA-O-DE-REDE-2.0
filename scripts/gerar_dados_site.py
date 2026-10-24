@@ -22,6 +22,7 @@ CANDIDATOS = list("CDEF")
 DIVERGENCIAS = list("GH")
 RAIZ = Path(__file__).resolve().parent.parent
 SAIDA = RAIZ / "docs" / "dados.js"
+BASE_GEO = RAIZ / "scripts" / "base_geografica.json"
 
 # Histórico da 1ª higienização (bases jan/fev 2026) — exibido para manter a referência dos 390
 HISTORICO = {
@@ -32,6 +33,41 @@ HISTORICO = {
     ],
     "desconsiderados_estrategicos": 10,
 }
+
+
+def nivel(m, rede, base):
+    """Nível de garantia de atendimento (RN 566/2022) do município m, dado o conjunto de municípios com rede."""
+    if m in rede:
+        return 1  # há prestador no próprio município
+    g = base[m]
+    if any(v in rede for v in g["vizinhos"]):
+        return 2  # só em município limítrofe
+    if any(o in rede for o in base if base[o]["regiao"] == g["regiao"]):
+        return 3  # só na região de saúde (não limítrofe) — transporte custeado
+    if rede:
+        return 4  # só fora da região de saúde — transporte ida e volta
+    return 0      # nenhum prestador da categoria em GO/DF
+
+
+def cobertura_rn566(df):
+    """Para cada categoria: nível por município (antes, depois de descredenciar C–F, e só rede que fatura).
+    Sai como 3 strings de dígitos na ordem de base_geografica.json. Não leva contagens por município×categoria."""
+    base = {g["ibge"]: g for g in json.loads(BASE_GEO.read_text(encoding="utf-8"))}
+    ordem = list(base)
+    rede = df[(df["CATEGORIA_CODER"] != "NÃO INFORMADO") & (df["BLOCO"] != "I") & df["IBGE_MUN"].isin(base)]
+    cobertura = {}
+    for cat, g in rede.groupby("CATEGORIA_CODER"):
+        por_mun = g.groupby("IBGE_MUN").agg(cad=("BLOCO", "size"),
+                                            cand=("BLOCO", lambda s: s.isin(CANDIDATOS).sum()),
+                                            efe=("FATURA", "sum"))
+        antes = set(por_mun.index[por_mun["cad"] > 0])
+        depois = set(por_mun.index[por_mun["cad"] - por_mun["cand"] > 0])
+        efetiva = set(por_mun.index[por_mun["efe"] > 0])
+        cobertura[cat] = ["".join(str(nivel(m, s, base)) for m in ordem) for s in (antes, depois, efetiva)]
+    return {
+        "geo": [[m, base[m]["nome"], base[m]["uf"], base[m]["regiao"], [ordem.index(v) for v in base[m]["vizinhos"]]] for m in ordem],
+        "cobertura": cobertura,
+    }
 
 
 def main(caminho):
@@ -45,7 +81,8 @@ def main(caminho):
     cubo = (df.groupby(["UF", "REGIAO_SAUDE", "CATEGORIA_CODER", "BLOCO", "CLASSE_REDE_EFETIVA"])
               .agg(n=("BLOCO", "size"), fat=("FATURA", "sum")).reset_index())
 
-    mun = df.groupby(["UF", "REGIAO_SAUDE", "MUNICIPIO"]).agg(
+    df["IBGE_MUN"] = df["IBGE_MUN"].fillna("")
+    mun = df.groupby(["UF", "REGIAO_SAUDE", "MUNICIPIO", "IBGE_MUN"]).agg(
         total=("BLOCO", "size"), fat=("FATURA", "sum"),
         cand=("BLOCO", lambda s: s.isin(CANDIDATOS).sum()),
         div=("BLOCO", lambda s: s.isin(DIVERGENCIAS).sum())).reset_index()
@@ -75,8 +112,9 @@ def main(caminho):
         "historico": HISTORICO,
         "cubo": [[r.UF, r.REGIAO_SAUDE, r.CATEGORIA_CODER, r.BLOCO, r.CLASSE_REDE_EFETIVA, int(r.n), int(r.fat)]
                  for r in cubo.itertuples()],
-        "municipios": [[r.UF, r.REGIAO_SAUDE, r.MUNICIPIO, int(r.total), int(r.fat), int(r.cand), int(r.div)]
+        "municipios": [[r.UF, r.REGIAO_SAUDE, r.MUNICIPIO, int(r.total), int(r.fat), int(r.cand), int(r.div), r.IBGE_MUN]
                        for r in mun.itertuples()],
+        **cobertura_rn566(df),
         "valor_por_bloco": valores(["BLOCO"]),
         "valor_por_regiao_bloco": valores(["UF", "REGIAO_SAUDE", "BLOCO"]),
     }

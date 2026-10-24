@@ -23,7 +23,8 @@ VERDE = "007A33"
 LIMA = "BBDD00"
 CREME = "F0EDE4"
 
-CATEGORIAS_EXCLUIDAS = {"MEDICO REGULADOR", "ENFERMEIRO REGULADOR"}
+# reguladores e rede própria Ipasgo não são candidatos a descredenciamento
+CATEGORIAS_EXCLUIDAS = {"MEDICO REGULADOR", "ENFERMEIRO REGULADOR", "CLINICA IPASGO"}
 NOMES_TECNICOS = re.compile(r"LIB\. SEM LOCAL|REEMBOLSO", re.I)
 
 LEGENDA_BLOCOS = {
@@ -35,7 +36,7 @@ LEGENDA_BLOCOS = {
     "F": "Candidato com EFEITO CUMULATIVO — vários da mesma localidade/categoria; escalonar lotes",
     "G": "Fatura mas não consta no BI CODER — divergência cadastral a corrigir",
     "H": "Sem faturamento e presente em só uma base cadastral (FACIL × CODER) — saneamento cadastral",
-    "I": "Fora do escopo — categoria excluída (regulador), registro técnico ou sem documento",
+    "I": "Fora do escopo — regulador, rede própria Ipasgo, registro técnico ou sem documento",
 }
 
 
