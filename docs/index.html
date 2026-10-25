@@ -119,8 +119,8 @@
               <option value="fat">Prestadores que faturam (mapa de calor)</option>
               <option value="cand">Candidatos a descredenciamento C–F (mapa de calor)</option>
               <option value="cob0">Cobertura RN 566 — hoje</option>
-              <option value="cob1" selected>Cobertura RN 566 — após descredenciar C–F</option>
-              <option value="imp">Impacto — onde a cobertura piora</option>
+              <option value="cob1">Cobertura RN 566 — após descredenciar C–F</option>
+              <option value="imp" selected>Impacto — onde a cobertura piora</option>
             </select></div>
           <div id="mCatBox"><label for="mCat">Categoria</label><select id="mCat"></select></div>
         </div>
@@ -313,12 +313,27 @@
                   cand: ["#fbe9d2", "#f6c98e", "#eb9a48", "#c96a1f", "#8f4508"] };
   const VAZIO = "#e2ded3";
   const ROTULO_IND = { cad: "prestadores na rede", fat: "prestadores que faturam", cand: "candidatos C–F" };
-  const mapa = { camada: "mun", ind: "cob1", cat: "", sel: null };
+  const mapa = { camada: "mun", ind: "imp", cat: "", sel: null };
   const ACENTOS = { "SAO PATRICIO I": "São Patrício I", "SAO PATRICIO II": "São Patrício II" };
   const titulo = s => ACENTOS[s] || s.toLowerCase().split(" ")
     .map(p => /^(i|ii|iii|iv)$/.test(p) ? p.toUpperCase() : ["de", "da", "do", "das", "dos"].includes(p) ? p : p.charAt(0).toUpperCase() + p.slice(1))
     .join(" ");
 
+  // categoria do mapa = filtro "Categoria" do topo ("" = todas as categorias)
+  const CATS = Object.keys(D.cobertura || {}).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const pioraNivel = (a, d) => d > a || (d === 0 && a !== 0);
+  // resumo por município considerando TODAS as categorias
+  const RESUMO = GEO.map(g => {
+    let r0 = 0, r1 = 0; const pioras = [];
+    for (const cat of CATS) {
+      const a = +D.cobertura[cat][0][g.i], d = +D.cobertura[cat][1][g.i];
+      if (a === 1) r0++;
+      if (d === 1) r1++;
+      if (pioraNivel(a, d)) pioras.push([cat, a, d]);
+    }
+    return { r0, r1, pioras };
+  });
+  const todas = () => !mapa.cat;
   function nivelDe(g, k) { const c = D.cobertura[mapa.cat]; return c ? +c[k][g.i] : 0; }
   function faixas(valores) {  // 5 faixas por quantis dos valores > 0
     const v = valores.filter(x => x > 0).sort((a, b) => a - b);
@@ -326,12 +341,30 @@
     return [0.2, 0.4, 0.6, 0.8].map(q => v[Math.min(v.length - 1, Math.floor(q * v.length))]);
   }
   const corCalor = (x, lim, pal) => x <= 0 ? VAZIO : pal[lim.filter(l => x > l).length];
+  function legendaCalor(vals, lim, pal, rotulo) {
+    const ini = [1, ...lim.map(l => l + 1)], fim = [...lim, Math.max(0, ...vals)];
+    return `<span><i style="background:${VAZIO}"></i>0</span>` +
+      pal.map((c, k) => ini[k] <= fim[k] ? `<span><i style="background:${c}"></i>${fmt(ini[k])}${fim[k] > ini[k] ? "–" + fmt(fim[k]) : ""}</span>` : "").join("") +
+      `<span style="color:var(--suave)">${rotulo}</span>`;
+  }
+
+  // sincroniza a caixa do mapa com o filtro do topo
+  function sincronizarCategoria() {
+    mapa.cat = D.cobertura[f.cat] ? f.cat : "";
+    $("mCat").value = mapa.cat;
+  }
+  function escolherCategoria(cat) {
+    f.cat = cat;
+    if (cat && !mapa.ind.startsWith("cob") && mapa.ind !== "imp") { mapa.ind = "imp"; $("mInd").value = "imp"; }
+    montarFiltros(); render();
+  }
 
   function montarMapa() {
-    const cats = Object.keys(D.cobertura).sort((a, b) => a.localeCompare(b, "pt-BR"));
-    $("mCat").innerHTML = cats.map(c => `<option>${esc(c)}</option>`).join("");
-    mapa.cat = cats.includes("MEDICO") ? "MEDICO" : cats[0];
-    $("mCat").value = mapa.cat;
+    const sel = $("mCat");
+    sel.innerHTML = "";
+    sel.add(new Option("Todas as categorias", ""));
+    CATS.forEach(c => sel.add(new Option(c, c)));
+    $("mInd").value = mapa.ind;
     const svg = $("mapa");
     svg.setAttribute("viewBox", `0 0 ${M.largura} ${M.altura}`);
     svg.innerHTML =
@@ -365,15 +398,15 @@
       renderMapa();
     });
     $("mInd").onchange = () => { mapa.ind = $("mInd").value; renderMapa(); };
-    $("mCat").onchange = () => { mapa.cat = $("mCat").value; renderMapa(); };
+    $("mCat").onchange = () => escolherCategoria($("mCat").value);
   }
 
   function textoMun(g) {
-    const c = contMun(g);
+    const c = contMun(g), R = RESUMO[g.i];
     let t = `<strong>${esc(g.nome)}</strong> · ${esc(titulo(g.reg))}<br>${fmt(c.total)} na rede · ${fmt(c.fat)} faturam · ${fmt(c.cand)} candidatos`;
     if (mapa.ind.startsWith("cob") || mapa.ind === "imp") {
-      const a = nivelDe(g, 0), d = nivelDe(g, 1);
-      t += `<br>${esc(mapa.cat)}: ${NIVEIS[a][0]}${a !== d ? " → " + NIVEIS[d][0] : ""}`;
+      if (todas()) t += `<br>Categorias com prestador no município: ${R.r0}${R.r1 !== R.r0 ? " → " + R.r1 : ""}<br>Categorias que pioram: ${R.pioras.length}`;
+      else { const a = nivelDe(g, 0), d = nivelDe(g, 1); t += `<br>${esc(mapa.cat)}: ${NIVEIS[a][0]}${a !== d ? " → " + NIVEIS[d][0] : ""}`; }
     }
     return t;
   }
@@ -384,50 +417,51 @@
 
   function renderMapa() {
     if (!M || !D.cobertura) return;
+    sincronizarCategoria();
     const svg = $("mapa"), ind = mapa.ind, cob = ind.startsWith("cob") || ind === "imp";
-    $("mCatBox").style.display = cob ? "" : "none";
     svg.classList.toggle("camada-reg", mapa.camada === "reg");
     const filtroAtivo = g => (!f.uf || g.uf === f.uf) && (!f.reg || g.reg === f.reg);
     const regFill = mapa.camada === "reg" && !cob;
     $("gRegF").style.display = regFill ? "" : "none";
     $("gRot").style.display = mapa.camada === "reg" ? "" : "none";
+    const pintar = cor => document.querySelectorAll("#gMun path").forEach(p => {
+      const g = GEO[+p.dataset.i];
+      p.setAttribute("fill", cor(g));
+      p.classList.toggle("apagado", !filtroAtivo(g));
+      p.classList.toggle("sel", !!mapa.sel && mapa.sel.tipo === "mun" && mapa.sel.i === g.i);
+    });
 
     let legenda = "";
     if (!cob) {
-      const pal = CALOR[ind];
-      const valor = mapa.camada === "reg"
-        ? Object.fromEntries(REGIOES.map(r => [r, GEO.filter(g => g.reg === r).reduce((s, g) => s + contMun(g)[ind === "cad" ? "total" : ind], 0)]))
-        : null;
-      const vals = mapa.camada === "reg" ? Object.values(valor) : GEO.map(g => contMun(g)[ind === "cad" ? "total" : ind]);
+      const pal = CALOR[ind], campo = ind === "cad" ? "total" : ind;
+      const valor = Object.fromEntries(REGIOES.map(r => [r, GEO.filter(g => g.reg === r).reduce((s, g) => s + contMun(g)[campo], 0)]));
+      const vals = mapa.camada === "reg" ? Object.values(valor) : GEO.map(g => contMun(g)[campo]);
       const lim = faixas(vals);
       if (mapa.camada === "reg") {
         document.querySelectorAll("#gRegF path").forEach(p => {
           const r = REGIOES[+p.dataset.r];
           p.setAttribute("fill", corCalor(valor[r], lim, pal));
           p.classList.toggle("apagado", !!f.reg && f.reg !== r || !!f.uf && GEO.find(g => g.reg === r).uf !== f.uf);
-          p.classList.toggle("sel", mapa.sel && mapa.sel.tipo === "reg" && mapa.sel.r === r);
+          p.classList.toggle("sel", !!mapa.sel && mapa.sel.tipo === "reg" && mapa.sel.r === r);
         });
       }
-      document.querySelectorAll("#gMun path").forEach(p => {
-        const g = GEO[+p.dataset.i];
-        p.setAttribute("fill", corCalor(contMun(g)[ind === "cad" ? "total" : ind], lim, pal));
-        p.classList.toggle("apagado", !filtroAtivo(g));
-        p.classList.toggle("sel", !!mapa.sel && mapa.sel.tipo === "mun" && mapa.sel.i === g.i);
-      });
-      const ini = [1, ...lim.map(l => l + 1)], fim = [...lim, Math.max(...vals)];
-      legenda = `<span><i style="background:${VAZIO}"></i>0</span>` +
-        pal.map((c, k) => ini[k] <= fim[k] ? `<span><i style="background:${c}"></i>${fmt(ini[k])}${fim[k] > ini[k] ? "–" + fmt(fim[k]) : ""}</span>` : "").join("") +
-        `<span style="color:var(--suave)">${ROTULO_IND[ind]} por ${mapa.camada === "reg" ? "região" : "município"}</span>`;
+      pintar(g => corCalor(contMun(g)[campo], lim, pal));
+      legenda = legendaCalor(vals, lim, pal, `${ROTULO_IND[ind]} por ${mapa.camada === "reg" ? "região" : "município"}`) +
+        (f.cat ? `<span style="color:#9a5a00;width:100%">O mapa de calor soma todas as categorias — por proteção, ele não é detalhado por categoria. Para ver ${esc(f.cat)}, use os indicadores de Cobertura ou Impacto.</span>` : "");
+    } else if (todas()) {
+      if (ind === "imp") {
+        const vals = RESUMO.map(R => R.pioras.length), lim = faixas(vals);
+        pintar(g => corCalor(RESUMO[g.i].pioras.length, lim, CALOR.cand));
+        legenda = legendaCalor(vals, lim, CALOR.cand, "categorias que pioram de nível no município (todas as categorias)");
+      } else {
+        const k = ind === "cob0" ? "r0" : "r1", vals = RESUMO.map(R => R[k]), lim = faixas(vals);
+        pintar(g => corCalor(RESUMO[g.i][k], lim, CALOR.cad));
+        legenda = legendaCalor(vals, lim, CALOR.cad, `categorias com prestador no próprio município — ${ind === "cob0" ? "hoje" : "após descredenciar"}. Escolha uma categoria para ver os níveis da RN 566.`);
+      }
     } else {
-      document.querySelectorAll("#gMun path").forEach(p => {
-        const g = GEO[+p.dataset.i], a = nivelDe(g, 0), d = nivelDe(g, 1);
-        let cor;
-        if (ind === "cob0") cor = NIVEIS[a][1];
-        else if (ind === "cob1") cor = NIVEIS[d][1];
-        else cor = d !== a ? NIVEIS[d][1] : VAZIO;
-        p.setAttribute("fill", cor);
-        p.classList.toggle("apagado", !filtroAtivo(g));
-        p.classList.toggle("sel", !!mapa.sel && mapa.sel.tipo === "mun" && mapa.sel.i === g.i);
+      pintar(g => {
+        const a = nivelDe(g, 0), d = nivelDe(g, 1);
+        return ind === "cob0" ? NIVEIS[a][1] : ind === "cob1" ? NIVEIS[d][1] : (d !== a ? NIVEIS[d][1] : VAZIO);
       });
       legenda = [1, 2, 3, 4, 0].map(n => `<span><i style="background:${NIVEIS[n][1]}"></i>${NIVEIS[n][0]}</span>`).join("") +
         (ind === "imp" ? `<span><i style="background:${VAZIO}"></i>Sem mudança</span><span style="color:var(--suave)">cor = nível após descredenciar</span>` : "");
@@ -446,18 +480,32 @@
     if (!s) { box.innerHTML = `<h3>Clique no mapa</h3>Clique num município para ver a rede e o nível de garantia de atendimento. Na camada de regiões, o clique filtra o painel pela região.`; return; }
     if (s.tipo === "reg") {
       const gs = GEO.filter(g => g.reg === s.r), sm = k => gs.reduce((x, g) => x + contMun(g)[k], 0);
-      const semRede = gs.filter(g => nivelDe(g, 0) !== 1).length, semDepois = gs.filter(g => nivelDe(g, 1) !== 1).length;
+      const linhaCat = todas()
+        ? `${gs.filter(g => RESUMO[g.i].pioras.length).length} município(s) com alguma categoria que piora após o descredenciamento.`
+        : `${esc(mapa.cat)}: ${gs.filter(g => nivelDe(g, 0) !== 1).length} município(s) sem prestador no próprio município hoje; ${gs.filter(g => nivelDe(g, 1) !== 1).length} após descredenciar.`;
       box.innerHTML = `<h3>Região ${esc(titulo(s.r))}</h3>${gs.length} municípios · ${fmt(sm("total"))} prestadores na rede · ${fmt(sm("fat"))} faturam · ${fmt(sm("cand"))} candidatos C–F
-        <div style="margin-top:6px">${esc(mapa.cat)}: ${semRede} município(s) sem prestador no próprio município hoje; ${semDepois} após descredenciar.</div>
+        <div style="margin-top:6px">${linhaCat}</div>
         <div style="margin-top:6px"><button type="button" id="limparReg">Ver todo o estado</button></div>`;
       $("limparReg").onclick = () => { mapa.sel = null; f.uf = ""; f.reg = ""; montarFiltros(); render(); };
       return;
     }
-    const g = GEO[s.i], c = contMun(g), a = nivelDe(g, 0), d = nivelDe(g, 1), e = nivelDe(g, 2);
-    const vizRede = g.viz.map(v => GEO[v]).filter(v => nivelDe(v, 1) === 1).map(v => v.nome);
-    box.innerHTML = `<h3>${esc(g.nome)} · ${g.uf}</h3>
+    const g = GEO[s.i], c = contMun(g);
+    const cabec = `<h3>${esc(g.nome)} · ${g.uf}</h3>
       <div style="color:var(--suave);margin-bottom:6px">Região de saúde ${esc(titulo(g.reg))} · ${g.viz.length} município(s) limítrofe(s)</div>
-      ${fmt(c.total)} prestadores na rede · ${fmt(c.fat)} faturam · ${fmt(c.cand)} candidatos C–F · ${fmt(c.div)} divergências
+      ${fmt(c.total)} prestadores na rede · ${fmt(c.fat)} faturam · ${fmt(c.cand)} candidatos C–F · ${fmt(c.div)} divergências`;
+    if (todas()) {
+      const R = RESUMO[g.i];
+      box.innerHTML = cabec + `
+        <div style="margin-top:8px">Categorias com prestador no próprio município: <strong>${R.r0}</strong> hoje → <strong>${R.r1}</strong> após descredenciar.</div>
+        ${R.pioras.length ? `<div style="margin-top:6px;color:#a3261b;font-weight:600">${R.pioras.length} categoria(s) pioram neste município:</div>
+        <ul class="lista-piora">${R.pioras.map(([cat, a, d]) => `<li data-cat="${esc(cat)}">${esc(cat)} — ${NIVEIS[a][0]} → <strong>${NIVEIS[d][0]}</strong></li>`).join("")}</ul>`
+        : `<div style="margin-top:6px">Nenhuma categoria piora neste município.</div>`}`;
+      box.querySelectorAll("li[data-cat]").forEach(li => li.onclick = () => escolherCategoria(li.dataset.cat));
+      return;
+    }
+    const a = nivelDe(g, 0), d = nivelDe(g, 1), e = nivelDe(g, 2);
+    const vizRede = g.viz.map(v => GEO[v]).filter(v => nivelDe(v, 1) === 1).map(v => v.nome);
+    box.innerHTML = cabec + `
       <div style="margin-top:8px;font-weight:600">${esc(mapa.cat)}</div>
       ${linhaNivel("Hoje", a)}${linhaNivel("Após descredenciar C–F", d)}${linhaNivel("Só rede que fatura", e)}
       <div style="margin-top:6px">${NIVEIS[d][2]}</div>
@@ -467,30 +515,39 @@
 
   function renderImpacto() {
     const gs = GEO.filter(g => (!f.uf || g.uf === f.uf) && (!f.reg || g.reg === f.reg));
-    const cont = k => [1, 2, 3, 4, 0].map(n => gs.filter(g => nivelDe(g, k) === n).length);
-    const antes = cont(0), depois = cont(1);
-    const piora = gs.filter(g => nivelDe(g, 1) > nivelDe(g, 0) || (nivelDe(g, 1) === 0 && nivelDe(g, 0) !== 0))
-      .sort((x, y) => nivelDe(y, 1) - nivelDe(x, 1) || x.nome.localeCompare(y.nome, "pt-BR"));
-    const ranking = Object.entries(D.cobertura).map(([cat, [a, d]]) => {
-      let n = 0; for (const g of gs) if (+d[g.i] > +a[g.i] || (d[g.i] === "0" && a[g.i] !== "0")) n++;
-      return [cat, n];
-    }).filter(x => x[1] > 0).sort((x, y) => y[1] - x[1]).slice(0, 6);
     const area = f.reg ? `região ${titulo(f.reg)}` : f.uf ? f.uf : "GO e DF";
-    $("impacto").innerHTML = `
-      <h3 style="font-size:15px;margin:0 0 6px">Impacto em ${esc(mapa.cat)} · ${esc(area)}</h3>
-      <table class="mini"><thead><tr><th>Nível de garantia</th><th class="num">Hoje</th><th class="num">Após</th></tr></thead><tbody>
-      ${[1, 2, 3, 4, 0].map((n, k) => antes[k] || depois[k] ? `<tr><td><i style="display:inline-block;width:11px;height:11px;border-radius:2px;background:${NIVEIS[n][1]};margin-right:5px"></i>${NIVEIS[n][0]}</td><td class="num">${antes[k]}</td><td class="num">${depois[k]}${depois[k] !== antes[k] ? (depois[k] > antes[k] ? " ▲" : " ▼") : ""}</td></tr>` : "").join("")}
-      </tbody></table>
-      <p style="margin:10px 0 4px;font-size:13.5px"><strong>${piora.length}</strong> município(s) pioram de nível:</p>
-      <ul class="lista-piora">${piora.map(g => `<li data-i="${g.i}">${esc(g.nome)} — ${NIVEIS[nivelDe(g, 0)][0]} → <strong>${NIVEIS[nivelDe(g, 1)][0]}</strong></li>`).join("") || "<li>Nenhum.</li>"}</ul>
-      ${ranking.length ? `<p style="margin:12px 0 4px;font-size:13.5px"><strong>Categorias com mais municípios afetados</strong></p>
-      <table class="mini"><tbody>${ranking.map(([c, n]) => `<tr data-cat="${esc(c)}" style="cursor:pointer"><td>${esc(c)}</td><td class="num">${n}</td></tr>`).join("")}</tbody></table>` : ""}`;
-    document.querySelectorAll(".lista-piora li[data-i]").forEach(li => li.onclick = () => { mapa.sel = { tipo: "mun", i: +li.dataset.i }; renderMapa(); });
-    document.querySelectorAll("#impacto tr[data-cat]").forEach(tr => tr.onclick = () => {
-      mapa.cat = tr.dataset.cat; $("mCat").value = mapa.cat;
-      if (!mapa.ind.startsWith("cob") && mapa.ind !== "imp") { mapa.ind = "imp"; $("mInd").value = "imp"; }
-      renderMapa();
-    });
+    const ranking = CATS.map(cat => {
+      const [a, d] = D.cobertura[cat];
+      let n = 0; for (const g of gs) if (pioraNivel(+a[g.i], +d[g.i])) n++;
+      return [cat, n];
+    }).filter(x => x[1] > 0).sort((x, y) => y[1] - x[1]);
+    const tabRanking = (lista, titulo) => lista.length ? `<p style="margin:12px 0 4px;font-size:13.5px"><strong>${titulo}</strong></p>
+      <table class="mini"><tbody>${lista.map(([c, n]) => `<tr data-cat="${esc(c)}" style="cursor:pointer" title="Ver no mapa"><td>${esc(c)}</td><td class="num">${n} município(s)</td></tr>`).join("")}</tbody></table>` : "";
+
+    if (todas()) {
+      const piora = gs.filter(g => RESUMO[g.i].pioras.length).sort((x, y) => RESUMO[y.i].pioras.length - RESUMO[x.i].pioras.length || x.nome.localeCompare(y.nome, "pt-BR"));
+      $("impacto").innerHTML = `
+        <h3 style="font-size:15px;margin:0 0 6px">Impacto em todas as categorias · ${esc(area)}</h3>
+        <p style="margin:0 0 4px;font-size:13.5px"><strong>${piora.length}</strong> município(s) com alguma categoria que piora:</p>
+        <ul class="lista-piora">${piora.map(g => `<li data-i="${g.i}">${esc(g.nome)} — <strong>${RESUMO[g.i].pioras.length}</strong> categoria(s)</li>`).join("") || "<li>Nenhum.</li>"}</ul>
+        ${tabRanking(ranking, "Categorias afetadas (clique para ver no mapa)")}`;
+    } else {
+      const cont = k => [1, 2, 3, 4, 0].map(n => gs.filter(g => nivelDe(g, k) === n).length);
+      const antes = cont(0), depois = cont(1);
+      const piora = gs.filter(g => pioraNivel(nivelDe(g, 0), nivelDe(g, 1)))
+        .sort((x, y) => nivelDe(y, 1) - nivelDe(x, 1) || x.nome.localeCompare(y.nome, "pt-BR"));
+      $("impacto").innerHTML = `
+        <h3 style="font-size:15px;margin:0 0 6px">Impacto em ${esc(mapa.cat)} · ${esc(area)} <button type="button" class="chip" id="verTodas" style="margin-left:6px">Ver todas as categorias</button></h3>
+        <table class="mini"><thead><tr><th>Nível de garantia</th><th class="num">Hoje</th><th class="num">Após</th></tr></thead><tbody>
+        ${[1, 2, 3, 4, 0].map((n, k) => antes[k] || depois[k] ? `<tr><td><i style="display:inline-block;width:11px;height:11px;border-radius:2px;background:${NIVEIS[n][1]};margin-right:5px"></i>${NIVEIS[n][0]}</td><td class="num">${antes[k]}</td><td class="num">${depois[k]}${depois[k] !== antes[k] ? (depois[k] > antes[k] ? " ▲" : " ▼") : ""}</td></tr>` : "").join("")}
+        </tbody></table>
+        <p style="margin:10px 0 4px;font-size:13.5px"><strong>${piora.length}</strong> município(s) pioram de nível:</p>
+        <ul class="lista-piora">${piora.map(g => `<li data-i="${g.i}">${esc(g.nome)} — ${NIVEIS[nivelDe(g, 0)][0]} → <strong>${NIVEIS[nivelDe(g, 1)][0]}</strong></li>`).join("") || "<li>Nenhum.</li>"}</ul>
+        ${tabRanking(ranking.slice(0, 6), "Categorias com mais municípios afetados")}`;
+      $("verTodas").onclick = () => escolherCategoria("");
+    }
+    document.querySelectorAll("#impacto .lista-piora li[data-i]").forEach(li => li.onclick = () => { mapa.sel = { tipo: "mun", i: +li.dataset.i }; renderMapa(); });
+    document.querySelectorAll("#impacto tr[data-cat]").forEach(tr => tr.onclick = () => escolherCategoria(tr.dataset.cat));
   }
 
   function tabela(id, linhas, chaveOrdem, cols) {
