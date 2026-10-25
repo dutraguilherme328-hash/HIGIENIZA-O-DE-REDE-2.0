@@ -42,6 +42,12 @@
   .classes div{background:var(--creme);border-radius:8px;padding:10px;text-align:center}
   .classes b{display:block;font-size:22px}
   .nota{font-size:12.5px;color:var(--suave)}
+  .filtros select{max-width:280px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center;min-height:28px}
+  .chip{background:var(--creme);border:1px solid var(--linha);color:var(--tinta);border-radius:999px;padding:4px 10px;font-size:13px}
+  .chip:hover{border-color:var(--verde);background:#e6f3ea}
+  .chip span{font-weight:700;margin-left:2px;color:var(--verde2)}
+  button:disabled{opacity:.45;cursor:default}
   footer{font-size:12.5px;color:var(--suave);text-align:center;margin-top:8px}
   .mapa-grade{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:18px}
   @media(max-width:900px){.mapa-grade{grid-template-columns:1fr}}
@@ -85,8 +91,9 @@
       <div><label for="fReg">Região de saúde</label><select id="fReg"></select></div>
       <div><label for="fCat">Categoria</label><select id="fCat"></select></div>
       <div><label for="fBloco">Bloco</label><select id="fBloco"></select></div>
-      <button id="limpar" type="button">Limpar filtros</button>
+      <button id="limpar" type="button">Limpar todos os filtros</button>
     </div>
+    <div id="chips" class="chips"></div>
   </div>
 
   <div class="kpis">
@@ -180,17 +187,46 @@
   const f = { uf: "", reg: "", cat: "", bloco: "" };
   const ordem = { cat: ["total", -1], mun: ["cand", -1] };
 
-  function opcoes(sel, valores, atual, rotulo) {
-    sel.innerHTML = `<option value="">${rotulo}</option>` +
-      valores.map(v => `<option${v === atual ? " selected" : ""}>${esc(v)}</option>`).join("");
-  }
+  const TODOS = { uf: "Todas as UFs", reg: "Todas as regiões", cat: "Todas as categorias", bloco: "Todos os blocos" };
+  const ROT_FILTRO = { uf: "UF", reg: "Região", cat: "Categoria", bloco: "Bloco" };
   const unicos = (lista, k) => [...new Set(lista.map(r => r[k]))].sort((a, b) => a.localeCompare(b, "pt-BR"));
 
+  // monta a lista de opções só quando ela muda; a escolha é aplicada por .value (sem recriar a caixa a cada clique)
+  function opcoes(sel, valores, chave) {
+    const assinatura = valores.join("|");
+    if (sel.dataset.assinatura !== assinatura) {
+      sel.innerHTML = "";
+      sel.add(new Option(TODOS[chave], ""));
+      valores.forEach(v => sel.add(new Option(chave === "bloco" ? `${v} — ${D.legenda[v] || ""}` : v, v)));
+      sel.dataset.assinatura = assinatura;
+    }
+    sel.value = f[chave];
+    if (sel.value !== f[chave]) { f[chave] = ""; sel.value = ""; }  // valor que não existe mais na lista
+  }
+
   function montarFiltros() {
-    opcoes($("fUF"), unicos(cubo, "uf"), f.uf, "Todas");
-    opcoes($("fReg"), unicos(cubo.filter(r => !f.uf || r.uf === f.uf), "reg"), f.reg, "Todas");
-    opcoes($("fCat"), unicos(cubo, "cat"), f.cat, "Todas");
-    opcoes($("fBloco"), BLOCOS, f.bloco, "Todos");
+    opcoes($("fUF"), unicos(cubo, "uf"), "uf");
+    opcoes($("fReg"), unicos(cubo.filter(r => !f.uf || r.uf === f.uf), "reg"), "reg");
+    opcoes($("fCat"), unicos(cubo, "cat"), "cat");
+    opcoes($("fBloco"), BLOCOS, "bloco");
+    // etiquetas dos filtros ativos, cada uma com × para remover só ela
+    const ativos = Object.keys(ROT_FILTRO).filter(k => f[k]);
+    const busca = $("fMun").value.trim();
+    $("chips").innerHTML = ativos.map(k => `<button type="button" class="chip" data-k="${k}" title="Remover este filtro">${ROT_FILTRO[k]}: <strong>${esc(f[k])}</strong> <span aria-hidden="true">×</span></button>`).join("") +
+      (busca ? `<button type="button" class="chip" data-k="mun" title="Remover a busca">Município: <strong>${esc(busca)}</strong> <span aria-hidden="true">×</span></button>` : "") +
+      (ativos.length || busca ? "" : `<span class="nota">Nenhum filtro ativo — mostrando toda a rede.</span>`);
+    $("chips").querySelectorAll(".chip").forEach(b => b.onclick = () => removerFiltro(b.dataset.k));
+    $("limpar").disabled = !ativos.length && !busca;
+  }
+
+  function removerFiltro(k) {
+    if (k === "mun") $("fMun").value = "";
+    else {
+      f[k] = "";
+      if (k === "uf") f.reg = "";
+    }
+    if ((k === "reg" || k === "uf") && mapa.sel && mapa.sel.tipo === "reg") mapa.sel = null;
+    montarFiltros(); render();
   }
 
   const soma = (lista, k) => lista.reduce((s, r) => s + r[k], 0);
@@ -484,11 +520,13 @@
       <p class="nota">${fmt(h.desconsiderados_estrategicos)} desconsiderados por questões estratégicas.</p>`;
   }
 
-  ["fUF", "fReg", "fCat", "fBloco"].forEach(id => $(id).onchange = () => {
-    f.uf = $("fUF").value; f.reg = id === "fUF" ? "" : $("fReg").value; f.cat = $("fCat").value; f.bloco = $("fBloco").value;
+  [["fUF", "uf"], ["fReg", "reg"], ["fCat", "cat"], ["fBloco", "bloco"]].forEach(([id, k]) => $(id).onchange = () => {
+    f[k] = $(id).value;
+    if (k === "uf") f.reg = "";
+    if ((k === "uf" || k === "reg") && mapa.sel && mapa.sel.tipo === "reg" && mapa.sel.r !== f.reg) mapa.sel = null;
     montarFiltros(); render();
   });
-  $("fMun").oninput = render;
+  $("fMun").oninput = () => { montarFiltros(); render(); };
   $("limpar").onclick = () => { Object.keys(f).forEach(k => f[k] = ""); $("fMun").value = ""; mapa.sel = null; montarFiltros(); render(); };
 
   $("ref").textContent = `bases de ${D.data_referencia}`;
