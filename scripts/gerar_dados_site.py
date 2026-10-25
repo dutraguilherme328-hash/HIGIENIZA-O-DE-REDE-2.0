@@ -11,6 +11,7 @@ Uso:
     python scripts/gerar_dados_site.py dados/HIGIENIZACAO_REDE_CONSOLIDADA.xlsx
 """
 import json
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -169,7 +170,13 @@ def main(caminho):
     dados["candidatos"], dados["tem_especialidade"] = lista_candidatos(df)
     SAIDA.parent.mkdir(parents=True, exist_ok=True)
     SAIDA.write_text("window.DADOS = " + json.dumps(dados, ensure_ascii=False) + ";\n", encoding="utf-8")
-    print(f"OK: {len(df)} prestadores agregados -> {SAIDA}")
+    # força o navegador a buscar a versão nova dos dados (evita cache antigo do GitHub Pages)
+    versao = datetime.now().strftime("%Y%m%d%H%M")
+    pagina = RAIZ / "docs" / "index.html"
+    html = pagina.read_text(encoding="utf-8")
+    html = re.sub(r'src="(dados|mapa)\.js(\?v=\d+)?"', lambda m: f'src="{m.group(1)}.js?v={versao}"', html)
+    pagina.write_text(html, encoding="utf-8")
+    print(f"OK: {len(df)} prestadores agregados -> {SAIDA} (versão {versao})")
 
 
 if __name__ == "__main__":
