@@ -63,6 +63,19 @@
   .chip:hover{border-color:var(--verde);background:var(--hover)}
   .chip span{font-weight:700;margin-left:2px;color:var(--verde2)}
   button:disabled{opacity:.45;cursor:default}
+  .abas{display:flex;gap:4px;padding:10px 16px 0;max-width:1280px;margin:0 auto}
+  .abas button{border:1px solid var(--linha);border-bottom:none;border-radius:8px 8px 0 0;background:var(--cartao2);color:var(--suave);padding:9px 16px;font-weight:600}
+  .abas button.on{background:var(--cartao);color:var(--verde2);border-color:var(--verde);box-shadow:inset 0 3px 0 var(--verde)}
+  .badge{display:inline-block;background:var(--alerta-bg);color:var(--alerta);border-radius:999px;padding:0 8px;font-size:12px;margin-left:4px}
+  #tCand td{vertical-align:top}
+  #tCand tr.linha{cursor:pointer}
+  #tCand tr.linha:hover td{background:var(--hover)}
+  #tCand tr.aberta td{background:var(--hover)}
+  #tCand tr.det td{background:var(--caixa);font-size:13px;line-height:1.5;white-space:normal}
+  #tCand .mot{max-width:360px}
+  .det dl{display:grid;grid-template-columns:170px 1fr;gap:4px 12px;margin:4px 0}
+  .det dt{color:var(--suave)} .det dd{margin:0}
+  @media(max-width:700px){.det dl{grid-template-columns:1fr}.abas button{padding:8px 10px;font-size:13.5px}}
   footer{font-size:12.5px;color:var(--suave);text-align:center;margin-top:8px}
   .mapa-grade{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:18px}
   @media(max-width:900px){.mapa-grade{grid-template-columns:1fr}}
@@ -115,7 +128,12 @@
   </div>
   <button type="button" id="tema" aria-label="Alternar tema claro ou escuro"></button>
 </header>
+<nav class="abas" role="tablist">
+  <button type="button" role="tab" data-aba="painel" class="on">Painel geral</button>
+  <button type="button" role="tab" data-aba="cand">Potenciais a descredenciamento <span id="abaCandN" class="badge"></span></button>
+</nav>
 <main>
+<section id="abaPainel">
   <div class="card">
     <div class="filtros">
       <div><label for="fUF">UF</label><select id="fUF"></select></div>
@@ -200,6 +218,30 @@
     <p class="nota">Esta tabela respeita os filtros de UF e região. Ela não é cruzada com categoria nem com bloco, para não expor prestadores individualmente.</p>
   </div>
 
+</section>
+
+<section id="abaCand" hidden>
+  <div class="card">
+    <h2>Potenciais a descredenciamento</h2>
+    <p class="nota" style="margin-top:-4px">Lista preliminar para análise da equipe de Gestão de Rede (GERAS/COGER). Não é decisão de descredenciamento: cada caso precisa de validação e, nos blocos D, E e F, de substituto confirmado (RN 567/2022 e RN 585/2023). Base de referência: <span class="refData"></span>.</p>
+    <div class="filtros">
+      <div><label for="cBusca">Prestador</label><input id="cBusca" placeholder="Buscar pelo nome"></div>
+      <div><label for="cCat">Categoria</label><select id="cCat"></select></div>
+      <div id="cEspBox"><label for="cEsp">Especialidade</label><select id="cEsp"></select></div>
+      <div><label for="cReg">Região de saúde</label><select id="cReg"></select></div>
+      <div><label for="cMun">Município</label><select id="cMun"></select></div>
+      <div><label for="cBloco">Bloco</label><select id="cBloco"></select></div>
+      <button type="button" id="cLimpar">Limpar filtros</button>
+      <button type="button" id="cCsv">Baixar lista (CSV)</button>
+    </div>
+    <div id="cBlocos" class="chips"></div>
+  </div>
+  <div class="card">
+    <div id="cResumo" style="margin-bottom:8px;font-size:13.5px"></div>
+    <div class="rolagem" style="max-height:none"><table id="tCand"></table></div>
+    <p class="nota" id="cNotaEsp"></p>
+  </div>
+</section>
   <footer id="rodape"></footer>
 </main>
 
@@ -656,6 +698,104 @@
   $("ref").textContent = `bases de ${D.data_referencia}`;
   $("rodape").textContent = `Dados agregados da planilha consolidada (referência ${D.data_referencia}) · atualizado em ${D.gerado_em} · sem dados pessoais de prestadores`;
   if (M && D.cobertura) montarMapa(); else $("cardMapa").hidden = true;
+  // ------------------------------------------------------------------ ABA CANDIDATOS
+  const CAMPOS = D.candidatos_campos || [];
+  const LISTA_CAND = (D.candidatos || []).map(l => Object.fromEntries(CAMPOS.map((c, i) => [c, l[i]])));
+  const fc = { busca: "", cat: "", esp: "", reg: "", mun: "", bloco: "" };
+  const ordemC = { k: "score", dir: -1 };
+  let abertos = new Set();
+  const ROT_BLOCO = { C: "Rede suficiente", D: "Rede mínima", E: "Único na localidade", F: "Efeito cumulativo" };
+
+  function opcoesC(id, valores, chave, todos) {
+    const sel = $(id), ass = valores.join("|");
+    if (sel.dataset.ass !== ass) {
+      sel.innerHTML = ""; sel.add(new Option(todos, ""));
+      valores.forEach(v => sel.add(new Option(chave === "bloco" ? `${v} — ${ROT_BLOCO[v]}` : chave === "reg" ? titulo(v) : v, v)));
+      sel.dataset.ass = ass;
+    }
+    sel.value = fc[chave]; if (sel.value !== fc[chave]) { fc[chave] = ""; sel.value = ""; }
+  }
+  const filtraC = (ignorar) => LISTA_CAND.filter(c =>
+    (ignorar === "cat" || !fc.cat || c.categoria === fc.cat) && (ignorar === "esp" || !fc.esp || c.especialidade.split("; ").includes(fc.esp)) &&
+    (ignorar === "reg" || !fc.reg || c.regiao === fc.reg) && (ignorar === "mun" || !fc.mun || c.municipio === fc.mun) &&
+    (ignorar === "bloco" || !fc.bloco || c.bloco === fc.bloco) &&
+    (!fc.busca || c.nome.toLowerCase().includes(fc.busca.toLowerCase())));
+
+  function renderCand() {
+    if (!LISTA_CAND.length) return;
+    const u = (lista, k) => [...new Set(lista.map(c => c[k]).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    opcoesC("cCat", u(filtraC("cat"), "categoria"), "cat", "Todas as categorias");
+    const esps = [...new Set(filtraC("esp").flatMap(c => c.especialidade ? c.especialidade.split("; ") : []))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    $("cEspBox").style.display = D.tem_especialidade ? "" : "none";
+    opcoesC("cEsp", esps, "esp", "Todas as especialidades");
+    opcoesC("cReg", u(filtraC("reg"), "regiao"), "reg", "Todas as regiões");
+    opcoesC("cMun", u(filtraC("mun"), "municipio"), "mun", "Todos os municípios");
+    opcoesC("cBloco", ["C", "D", "E", "F"], "bloco", "Todos os blocos");
+    const base = filtraC("bloco");
+    $("cBlocos").innerHTML = ["C", "D", "E", "F"].map(b => `<button type="button" class="chip" data-b="${b}" style="${fc.bloco === b ? "border-color:var(--verde);font-weight:700" : ""}"><span class="tag ${b}">${b}</span> ${ROT_BLOCO[b]}: <strong>${base.filter(c => c.bloco === b).length}</strong></button>`).join("");
+    $("cBlocos").querySelectorAll(".chip").forEach(x => x.onclick = () => { fc.bloco = fc.bloco === x.dataset.b ? "" : x.dataset.b; renderCand(); });
+
+    const lista = filtraC().sort((a, b) => {
+      const va = a[ordemC.k], vb = b[ordemC.k];
+      return (typeof va === "number" ? va - vb : String(va).localeCompare(String(vb), "pt-BR")) * ordemC.dir || b.score - a.score || a.nome.localeCompare(b.nome, "pt-BR");
+    });
+    const filtrosAtivos = Object.values(fc).some(Boolean);
+    $("cResumo").innerHTML = `<strong>${fmt(lista.length)}</strong> de ${fmt(LISTA_CAND.length)} prestadores potenciais${filtrosAtivos ? " (com filtros)" : ""}. Clique numa linha para ver o motivo completo.`;
+    $("cLimpar").disabled = !filtrosAtivos;
+    const cols = [["nome", "Prestador"], ["categoria", "Categoria"], ["especialidade", "Especialidade"], ["municipio", "Município"], ["bloco", "Bloco"], ["score", "Score"], ["resumo", "Motivo"]];
+    $("tCand").innerHTML = `<thead><tr>${cols.map(([k, r]) => `<th data-k="${k}" class="${k === "score" ? "num" : ""}">${r}${ordemC.k === k ? (ordemC.dir < 0 ? " ▾" : " ▴") : ""}</th>`).join("")}</tr></thead><tbody>` +
+      (lista.map((c, i) => {
+        const id = c.nome + "|" + c.municipio, aberto = abertos.has(id);
+        const esp = c.especialidade || (c.categoria === "MEDICO" ? `<span style="color:var(--suave)" title="Base de especialidades ainda não carregada">—</span>` : "");
+        return `<tr class="linha${aberto ? " aberta" : ""}" data-id="${esc(id)}"><td><strong>${esc(c.nome)}</strong></td><td>${esc(c.categoria)}</td><td>${c.especialidade ? esc(c.especialidade) : esp}</td>` +
+          `<td>${esc(c.municipio)}${c.uf !== "GO" ? " · " + esc(c.uf) : ""}</td><td><span class="tag ${c.bloco}">${c.bloco}</span></td><td class="num">${c.score}</td><td class="mot">${esc(c.resumo)} <span style="color:var(--suave)">${aberto ? "▴" : "▾"}</span></td></tr>` +
+          (aberto ? `<tr class="det"><td colspan="${cols.length}"><div class="det"><dl>
+            <dt>Motivo</dt><dd>${esc(c.motivo)}</dd>
+            <dt>Ação recomendada</dt><dd><strong>${esc(c.acao)}</strong></dd>
+            <dt>Norma aplicável</dt><dd>${esc(c.norma)}</dd>
+            <dt>Rede na localidade</dt><dd>${esc(c.classe_rede)} · região de saúde ${esc(titulo(c.regiao))}</dd>
+            <dt>Composição do score (${c.score})</dt><dd>${esc(c.fatores)}</dd>
+          </dl></div></td></tr>` : "");
+      }).join("") || `<tr><td colspan="${cols.length}">Nenhum prestador com esses filtros.</td></tr>`) + `</tbody>`;
+    $("tCand").querySelectorAll("th").forEach(th => th.onclick = () => {
+      const k = th.dataset.k; ordemC.dir = ordemC.k === k ? -ordemC.dir : (k === "score" ? -1 : 1); ordemC.k = k; renderCand();
+    });
+    $("tCand").querySelectorAll("tr.linha").forEach(tr => tr.onclick = () => {
+      const id = tr.dataset.id; abertos.has(id) ? abertos.delete(id) : abertos.add(id); renderCand();
+    });
+    $("cNotaEsp").textContent = D.tem_especialidade ? "" :
+      "Especialidade: ainda não há base de especialidades carregada. Quando a base (CPF/CNPJ;ESPECIALIDADE) for incluída em dados/especialidades.csv, a coluna e o filtro passam a ser preenchidos.";
+  }
+
+  function baixarCsv() {
+    const lista = filtraC();
+    const cab = ["Prestador", "Categoria", "Especialidade", "Município", "UF", "Região de saúde", "Bloco", "Score", "Motivo", "Ação recomendada", "Norma aplicável", "Composição do score"];
+    const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const linhas = lista.map(c => [c.nome, c.categoria, c.especialidade, c.municipio, c.uf, titulo(c.regiao), c.bloco, c.score, c.motivo, c.acao, c.norma, c.fatores].map(q).join(";"));
+    const blob = new Blob(["\ufeff" + [cab.map(q).join(";"), ...linhas].join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "potenciais_descredenciamento.csv";
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+
+  [["cCat", "cat"], ["cEsp", "esp"], ["cReg", "reg"], ["cMun", "mun"], ["cBloco", "bloco"]].forEach(([id, k]) => $(id).onchange = () => {
+    fc[k] = $(id).value; if (k === "reg") fc.mun = ""; renderCand();
+  });
+  $("cBusca").oninput = () => { fc.busca = $("cBusca").value.trim(); renderCand(); };
+  $("cLimpar").onclick = () => { Object.keys(fc).forEach(k => fc[k] = ""); $("cBusca").value = ""; renderCand(); };
+  $("cCsv").onclick = baixarCsv;
+
+  function mostrarAba(aba) {
+    const cand = aba === "cand" && LISTA_CAND.length;
+    $("abaPainel").hidden = !!cand; $("abaCand").hidden = !cand;
+    document.querySelectorAll(".abas button").forEach(b => { const on = b.dataset.aba === (cand ? "cand" : "painel"); b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
+    if (cand) renderCand();
+  }
+  document.querySelectorAll(".abas button").forEach(b => b.onclick = () => { location.hash = b.dataset.aba === "cand" ? "candidatos" : ""; mostrarAba(b.dataset.aba); });
+  window.addEventListener("hashchange", () => mostrarAba(location.hash === "#candidatos" ? "cand" : "painel"));
+  $("abaCandN").textContent = LISTA_CAND.length ? fmt(LISTA_CAND.length) : "";
+  document.querySelectorAll(".refData").forEach(e => e.textContent = D.data_referencia);
+
   // ------------------------------------------------------------------ TEMA
   const PALETAS = {
     claro: { cad: ["#eef3dc", "#cfe6a2", "#93c873", "#4a9d55", "#007A33"], cand: ["#fbe9d2", "#f6c98e", "#eb9a48", "#c96a1f", "#8f4508"] },
@@ -677,6 +817,7 @@
   aplicarTema(document.documentElement.getAttribute("data-tema") || "claro");
 
   montarFiltros(); historico(); render();
+  mostrarAba(location.hash === "#candidatos" ? "cand" : "painel");
 })();
 </script>
 </body>

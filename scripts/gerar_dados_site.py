@@ -35,6 +35,52 @@ HISTORICO = {
 }
 
 
+ESPECIALIDADES = RAIZ / "dados" / "especialidades.csv"  # opcional: CPF_CNPJ;ESPECIALIDADE (fica fora do git)
+
+
+def ler_especialidades():
+    """Base opcional de especialidades. Aceita CPF/CNPJ com ou sem pontuação; vários por prestador viram 'A; B'."""
+    if not ESPECIALIDADES.exists():
+        return {}
+    e = pd.read_csv(ESPECIALIDADES, sep=";", dtype=str, encoding="utf-8-sig").fillna("")
+    doc, esp = e.columns[0], e.columns[1]
+    e["DOC"] = e[doc].str.replace(r"\D", "", regex=True).apply(lambda d: d.zfill(11) if len(d) <= 11 else d.zfill(14))
+    return e[e[esp] != ""].groupby("DOC")[esp].apply(lambda s: "; ".join(sorted(set(s.str.strip())))).to_dict()
+
+
+def motivo(r):
+    """Explica, em linguagem direta, por que o prestador é potencial a descredenciamento."""
+    zerado = "normalizado" in r.OBSERVACOES
+    m = ["Sem faturamento nos últimos 12 meses" + (" (consta na base de faturamento com valor liberado zerado)" if zerado else "")]
+    if r.ANOS_CREDENCIADO:
+        m.append(f"credenciado há {str(r.ANOS_CREDENCIADO).replace('.', ',')} anos" + (f" (desde {r.DATA_CREDENCIAMENTO})" if r.DATA_CREDENCIAMENTO else ""))
+    qtd = lambda n, onde: f"nenhum prestador da mesma categoria faturando {onde}" if str(n) in ("0", "") else f"{n} prestador(es) da mesma categoria faturando {onde}"
+    m.append(f"{qtd(r.REDE_EFETIVA_MUN, 'no município')} e {qtd(r.REDE_EFETIVA_REGIAO, 'na região de saúde').replace(' da mesma categoria faturando', '')}")
+    bloco = {
+        "C": "rede suficiente na localidade — a saída não compromete a cobertura",
+        "D": "rede mínima na localidade — descredenciar só com substituto confirmado",
+        "E": "não há outro prestador desta categoria em atividade no município — a falta de faturamento sozinha não autoriza o descredenciamento (RN 567/585); exige substituto antes",
+        "F": f"efeito cumulativo — {r.CANDIDATOS_NO_GRUPO} candidatos da mesma categoria no município; retirá-los juntos rebaixaria a rede, então o descredenciamento deve ser escalonado",
+    }[r.BLOCO]
+    m.append(bloco)
+    return "; ".join(m) + "."
+
+
+def lista_candidatos(df):
+    esp = ler_especialidades()
+    c = df[df["BLOCO"].isin(CANDIDATOS)].copy()
+    resumo = {"C": "Sem faturamento · rede suficiente", "D": "Sem faturamento · rede mínima",
+              "E": "Sem faturamento · único na localidade", "F": "Sem faturamento · efeito cumulativo"}
+    linhas = []
+    for r in c.sort_values(["SCORE_PRIORIDADE", "NOME"], ascending=[False, True]).itertuples():
+        linhas.append([
+            r.NOME, r.CATEGORIA_CODER, esp.get(r.DOC, ""), r.MUNICIPIO, r.UF, r.REGIAO_SAUDE,
+            r.BLOCO, int(float(r.SCORE_PRIORIDADE or 0)), resumo[r.BLOCO], motivo(r),
+            r.FATORES_SCORE, r.ACAO_RECOMENDADA, r.NORMA_APLICAVEL, r.CLASSE_REDE_EFETIVA,
+        ])
+    return linhas, bool(esp)
+
+
 def nivel(m, rede, base):
     """Nível de garantia de atendimento (RN 566/2022) do município m, dado o conjunto de municípios com rede."""
     if m in rede:
@@ -115,9 +161,12 @@ def main(caminho):
         "municipios": [[r.UF, r.REGIAO_SAUDE, r.MUNICIPIO, int(r.total), int(r.fat), int(r.cand), int(r.div), r.IBGE_MUN]
                        for r in mun.itertuples()],
         **cobertura_rn566(df),
+        "candidatos_campos": ["nome", "categoria", "especialidade", "municipio", "uf", "regiao", "bloco", "score",
+                              "resumo", "motivo", "fatores", "acao", "norma", "classe_rede"],
         "valor_por_bloco": valores(["BLOCO"]),
         "valor_por_regiao_bloco": valores(["UF", "REGIAO_SAUDE", "BLOCO"]),
     }
+    dados["candidatos"], dados["tem_especialidade"] = lista_candidatos(df)
     SAIDA.parent.mkdir(parents=True, exist_ok=True)
     SAIDA.write_text("window.DADOS = " + json.dumps(dados, ensure_ascii=False) + ";\n", encoding="utf-8")
     print(f"OK: {len(df)} prestadores agregados -> {SAIDA}")

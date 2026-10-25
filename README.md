@@ -1,7 +1,7 @@
 # Painel Higienização de Rede 2.0 — site estático (GitHub Pages)
 
 Site só de visualização, alimentado pela planilha consolidada do projeto.
-Mostra **apenas números agregados**: não há CPF/CNPJ, nome, endereço nem valor de prestador individual.
+O painel geral mostra números agregados. A aba **Potenciais a descredenciamento** lista os candidatos dos blocos C–F pelo **nome**. Ela não traz CPF/CNPJ, endereço, telefone nem valores.
 
 ## Como funciona
 
@@ -17,6 +17,26 @@ Regras de proteção aplicadas em `gerar_dados_site.py`:
 - **Contagens** são feitas por UF × região × categoria × bloco × classe de rede.
 - **Municípios** aparecem só com totais, sem cruzar com categoria nem com bloco.
 - **Valores em R$** aparecem só por bloco e por região, e somente para grupos com 3 ou mais prestadores.
+
+## Aba "Potenciais a descredenciamento"
+
+A aba lista os candidatos dos blocos C–F. Para cada um, mostra:
+- prestador, categoria, especialidade e município;
+- bloco e score;
+- motivo, ação recomendada, norma aplicável e composição do score.
+
+Na tela, é possível:
+- filtrar por nome, categoria, especialidade, região, município e bloco;
+- ordenar clicando no título de cada coluna;
+- baixar a lista filtrada em CSV.
+
+O link direto para a aba é `.../#candidatos`.
+
+**Especialidade médica.** As bases atuais não têm esse campo. Para preenchê-lo, siga estes passos:
+1. Salve `dados\especialidades.csv` com duas colunas separadas por `;`: `CPF_CNPJ;ESPECIALIDADE`. Use uma linha por especialidade; quem tiver mais de uma aparece como "A; B".
+2. Rode `atualizar_site.bat`.
+
+O arquivo fica fora do git. Só a especialidade vai para o site, ligada ao nome.
 
 ## Mapa da rede e RN 566/2022
 
@@ -80,8 +100,7 @@ Abra `docs/index.html` no navegador. Funciona sem servidor.
 
 ## Limitações
 
-- **O site e o repositório são públicos.** Qualquer pessoa com o link vê os números agregados. O site pede para não ser indexado por buscadores, mas não tem login.
-- Não há lista nem detalhe de prestador. Para isso, use a planilha ou o painel Django (VRS 2).
+- **O site e o repositório são públicos.** Qualquer pessoa com o link vê os números e a **lista nominal de potenciais a descredenciamento**, que inclui pessoas físicas, antes de qualquer notificação. Essa foi uma decisão consciente do responsável, com riscos de LGPD e de imagem. O site pede para não ser indexado por buscadores, mas não tem login. Para restringir o acesso, as alternativas são uma aba criptografada com senha ou o painel Django (VRS 2) com login.
 - A tabela de municípios não cruza com categoria nem com bloco, por proteção.
 - O mapa de cobertura mostra o **nível** por município × categoria, sem contagens. Ainda assim, quem conhece a rede local pode deduzir onde há candidatos. Avalie isso antes de divulgar o link.
 - A cobertura é medida por categoria do BI CODER, sem especialidade médica, e não considera prestadores fora da rede nem prazos de atendimento.
