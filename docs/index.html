@@ -5,47 +5,62 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Higienização de Rede 2.0</title>
+<script>
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem("tema"); } catch (e) {}
+    if (t !== "claro" && t !== "escuro") t = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "escuro" : "claro";
+    document.documentElement.setAttribute("data-tema", t);
+  })();
+</script>
 <style>
-  :root{--verde:#007A33;--verde2:#006B2D;--lima:#BBDD00;--creme:#F0EDE4;--tinta:#1d2a22;--suave:#5d6b62;--linha:#dcd8cc;--alerta:#9a5a00;--alerta-bg:#fde7c8;--div-bg:#e6e3f6;--ok-bg:#dff0e4}
+  :root{--verde:#007A33;--verde2:#006B2D;--lima:#BBDD00;--creme:#F0EDE4;--tinta:#1d2a22;--suave:#5d6b62;--linha:#dcd8cc;--alerta:#9a5a00;--alerta-bg:#fde7c8;--div-bg:#e6e3f6;--ok-bg:#dff0e4;
+    --fundo:#F0EDE4;--cartao:#fff;--cartao2:#faf9f5;--caixa:#F0EDE4;--campo:#fff;--hover:#e6f3ea;--mapa-bg:#f7f6f1;--borda-mun:#fff;--borda-reg:#3b4a40;
+    --rot-fill:#1d2a22;--rot-halo:#fff;--vazio:#e2ded3;--semrede:#c9c4b8;--perigo:#a3261b;--piora:#b3261e;--dica-bg:#1d2a22;--dica-tx:#fff;color-scheme:light}
+  :root[data-tema="escuro"]{--verde2:#7fd19b;--tinta:#e6ebe7;--suave:#9fada4;--linha:#2f3b34;--alerta:#f0a65a;--alerta-bg:#4a3417;--div-bg:#302c4d;--ok-bg:#1d3d29;
+    --fundo:#101713;--cartao:#18211c;--cartao2:#1d2721;--caixa:#232e27;--campo:#141c17;--hover:#1f3a2a;--mapa-bg:#141c17;--borda-mun:#101713;--borda-reg:#c9d3cc;
+    --rot-fill:#e8ece6;--rot-halo:#101713;--vazio:#2a322d;--semrede:#262c28;--perigo:#ff8a80;--piora:#ff6b5e;--dica-bg:#e8ece6;--dica-tx:#101713;color-scheme:dark}
+  #tema{background:transparent;color:#fff;border:1px solid #ffffffaa;white-space:nowrap}
+  #tema:hover{background:#ffffff22}
   *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--creme);color:var(--tinta);font-size:15px}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--fundo);color:var(--tinta);font-size:15px}
   header{background:var(--verde);color:#fff;padding:14px 20px;border-bottom:4px solid var(--lima)}
   header h1{margin:0;font-size:18px;font-weight:600}
   header p{margin:2px 0 0;font-size:13px;opacity:.85}
   main{max-width:1280px;margin:0 auto;padding:18px 16px 40px}
-  .card{background:#fff;border:1px solid var(--linha);border-radius:10px;padding:16px;margin-bottom:16px;min-width:0}
+  .card{background:var(--cartao);border:1px solid var(--linha);border-radius:10px;padding:16px;margin-bottom:16px;min-width:0}
   h2{font-size:16px;margin:0 0 12px;color:var(--verde2)}
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
   .kpis .card{margin:0}
   .kpi-r{font-size:13px;color:var(--suave)} .kpi-v{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums} .kpi-s{font-size:12px;color:var(--suave)}
   .filtros{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
   .filtros label{font-size:12px;color:var(--suave);display:block}
-  select,input{font:inherit;padding:7px 9px;border:1px solid var(--linha);border-radius:6px;background:#fff;max-width:100%}
-  button{font:inherit;background:#fff;color:var(--verde2);border:1px solid var(--verde);border-radius:6px;padding:7px 12px;cursor:pointer}
+  select,input{font:inherit;padding:7px 9px;border:1px solid var(--linha);border-radius:6px;background:var(--campo);color:var(--tinta);max-width:100%}
+  button{font:inherit;background:var(--cartao);color:var(--verde2);border:1px solid var(--verde);border-radius:6px;padding:7px 12px;cursor:pointer}
   .grade{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px}
   @media(max-width:860px){.grade{grid-template-columns:1fr}}
   @media(max-width:600px){.barra{grid-template-columns:30px minmax(0,1fr) 48px}.barra .vb{display:none}.filtros>div{flex:1 1 140px}.filtros select,.filtros input{width:100%}}
   .barra{display:grid;grid-template-columns:30px minmax(0,1fr) 56px 120px;gap:8px;align-items:center;margin:7px 0;cursor:pointer}
   .barra.ativo .tag{outline:2px solid var(--verde)}
   .barra .desc{font-size:12.5px;color:var(--suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .trilho{height:9px;background:var(--creme);border-radius:5px}.trilho div{height:9px;background:var(--verde);border-radius:5px}
+  .trilho{height:9px;background:var(--caixa);border-radius:5px}.trilho div{height:9px;background:var(--verde);border-radius:5px}
   .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-  .tag{display:inline-block;min-width:24px;text-align:center;border-radius:4px;padding:1px 6px;font-weight:700;background:var(--creme)}
+  .tag{display:inline-block;min-width:24px;text-align:center;border-radius:4px;padding:1px 6px;font-weight:700;background:var(--caixa)}
   .tag.A{background:var(--ok-bg)}.tag.C,.tag.D,.tag.E,.tag.F{background:var(--alerta-bg)}.tag.G,.tag.H{background:var(--div-bg)}
   table{width:100%;border-collapse:collapse;font-size:13.5px}
   th{background:var(--verde);color:#fff;text-align:left;padding:7px 8px;font-weight:600;cursor:pointer;white-space:nowrap}
   td{padding:6px 8px;border-bottom:1px solid var(--linha)}
-  tr:nth-child(even) td{background:#faf9f5}
+  tr:nth-child(even) td{background:var(--cartao2)}
   .rolagem{overflow-x:auto;max-height:520px;overflow-y:auto}
   .rolagem th{position:sticky;top:0}
   .classes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-  .classes div{background:var(--creme);border-radius:8px;padding:10px;text-align:center}
+  .classes div{background:var(--caixa);border-radius:8px;padding:10px;text-align:center}
   .classes b{display:block;font-size:22px}
   .nota{font-size:12.5px;color:var(--suave)}
   .filtros select{max-width:280px}
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center;min-height:28px}
-  .chip{background:var(--creme);border:1px solid var(--linha);color:var(--tinta);border-radius:999px;padding:4px 10px;font-size:13px}
-  .chip:hover{border-color:var(--verde);background:#e6f3ea}
+  .chip{background:var(--caixa);border:1px solid var(--linha);color:var(--tinta);border-radius:999px;padding:4px 10px;font-size:13px}
+  .chip:hover{border-color:var(--verde);background:var(--hover)}
   .chip span{font-weight:700;margin-left:2px;color:var(--verde2)}
   button:disabled{opacity:.45;cursor:default}
   footer{font-size:12.5px;color:var(--suave);text-align:center;margin-top:8px}
@@ -60,30 +75,30 @@
   .seg button{border:0;border-radius:0;padding:7px 12px}
   .seg button.on{background:var(--verde);color:#fff}
   .mapa-svg{position:relative}
-  #mapa{width:100%;height:auto;display:block;background:#f7f6f1;border-radius:8px}
-  #mapa .m{stroke:#fff;stroke-width:.6;cursor:pointer;transition:opacity .15s}
+  #mapa{width:100%;height:auto;display:block;background:var(--mapa-bg);border-radius:8px}
+  #mapa .m{stroke:var(--borda-mun);stroke-width:.6;cursor:pointer;transition:opacity .15s}
   #mapa .m:hover{stroke:var(--tinta);stroke-width:1.4}
-  #mapa .r{fill:none;stroke:#3b4a40;stroke-width:1.2;pointer-events:none}
+  #mapa .r{fill:none;stroke:var(--borda-reg);stroke-width:1.2;pointer-events:none}
   #mapa.camada-reg .r{stroke-width:2.2}
-  #mapa .r-fill{stroke:#fff;stroke-width:1.5;cursor:pointer}
+  #mapa .r-fill{stroke:var(--borda-mun);stroke-width:1.5;cursor:pointer}
   #mapa .sel{stroke:var(--tinta)!important;stroke-width:2.6!important}
-  #mapa .piora{stroke:#b3261e;stroke-width:2.2}
-  #mapa .pt{fill:#e8711a;fill-opacity:.85;stroke:#fff;stroke-width:1.2;pointer-events:none}
+  #mapa .piora{stroke:var(--piora);stroke-width:2.2}
+  #mapa .pt{fill:#e8711a;fill-opacity:.85;stroke:var(--borda-mun);stroke-width:1.2;pointer-events:none}
   .pan-kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px}
-  .pan-kpis div{background:var(--creme);border-radius:8px;padding:8px 10px;font-size:12.5px;color:var(--suave)}
+  .pan-kpis div{background:var(--caixa);border-radius:8px;padding:8px 10px;font-size:12.5px;color:var(--suave)}
   .pan-kpis b{display:block;font-size:20px;color:var(--tinta)}
   .pan-tab{max-height:360px;overflow:auto}
   .pan-tab th{position:sticky;top:0;font-size:11.5px;padding:5px 6px}
   .pan-tab td{font-size:12px;padding:4px 5px;white-space:nowrap}
   .pan-tab td:first-child{white-space:normal;min-width:110px}
   .pan-tab table{min-width:0}
-  .pan-tab tr[data-cat]{cursor:pointer}.pan-tab tr[data-cat]:hover td{background:#e6f3ea}
+  .pan-tab tr[data-cat]{cursor:pointer}.pan-tab tr[data-cat]:hover td{background:var(--hover)}
   #mapa .apagado{opacity:.25}
-  #mapa text{font-size:12px;font-weight:600;fill:#1d2a22;paint-order:stroke;stroke:#fff;stroke-width:3px;pointer-events:none}
-  .dica{position:absolute;pointer-events:none;background:#1d2a22;color:#fff;font-size:12.5px;padding:6px 9px;border-radius:6px;max-width:240px;z-index:2;line-height:1.35}
+  #mapa text{font-size:12px;font-weight:600;fill:var(--rot-fill);paint-order:stroke;stroke:var(--rot-halo);stroke-width:3px;pointer-events:none}
+  .dica{position:absolute;pointer-events:none;background:var(--dica-bg);color:var(--dica-tx);font-size:12.5px;padding:6px 9px;border-radius:6px;max-width:240px;z-index:2;line-height:1.35}
   .legenda{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;margin-top:8px;align-items:center}
   .legenda i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:5px}
-  .sel-box{background:var(--creme);border-radius:8px;padding:12px;margin-bottom:12px;font-size:13.5px}
+  .sel-box{background:var(--caixa);border-radius:8px;padding:12px;margin-bottom:12px;font-size:13.5px}
   .sel-box h3{margin:0 0 6px;font-size:15px}
   .nivel{display:inline-block;border-radius:4px;padding:1px 7px;font-size:12px;font-weight:600;color:#fff}
   .lista-piora{max-height:220px;overflow-y:auto;font-size:13px;margin:0;padding:0;list-style:none}
@@ -93,9 +108,12 @@
 </style>
 </head>
 <body>
-<header>
-  <h1>Higienização de Rede 2.0 · Ipasgo Saúde</h1>
-  <p>Painel de acompanhamento · GERAS / COGER · <span id="ref"></span></p>
+<header style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+  <div>
+    <h1>Higienização de Rede 2.0 · Ipasgo Saúde</h1>
+    <p>Painel de acompanhamento · GERAS / COGER · <span id="ref"></span></p>
+  </div>
+  <button type="button" id="tema" aria-label="Alternar tema claro ou escuro"></button>
 </header>
 <main>
   <div class="card">
@@ -325,7 +343,7 @@
   };
   const CALOR = { cad: ["#eef3dc", "#cfe6a2", "#93c873", "#4a9d55", "#007A33"], fat: ["#eef3dc", "#cfe6a2", "#93c873", "#4a9d55", "#007A33"],
                   cand: ["#fbe9d2", "#f6c98e", "#eb9a48", "#c96a1f", "#8f4508"] };
-  const VAZIO = "#e2ded3";
+  let VAZIO = "#e2ded3", SEMREDE = "#c9c4b8";
   const ROTULO_IND = { cad: "prestadores na rede", fat: "prestadores que faturam", cand: "candidatos C–F" };
   const mapa = { camada: "mun", ind: "pan", cat: "", sel: null };
   const ACENTOS = { "SAO PATRICIO I": "São Patrício I", "SAO PATRICIO II": "São Patrício II" };
@@ -464,16 +482,16 @@
       }
       pintar(g => corCalor(contMun(g)[campo], lim, pal));
       legenda = legendaCalor(vals, lim, pal, `${ROTULO_IND[ind]} por ${mapa.camada === "reg" ? "região" : "município"}`) +
-        (f.cat ? `<span style="color:#9a5a00;width:100%">O mapa de calor soma todas as categorias — por proteção, ele não é detalhado por categoria. Para ver ${esc(f.cat)}, use os indicadores de Cobertura ou Impacto.</span>` : "");
+        (f.cat ? `<span style="color:var(--alerta);width:100%">O mapa de calor soma todas as categorias — por proteção, ele não é detalhado por categoria. Para ver ${esc(f.cat)}, use os indicadores de Cobertura ou Impacto.</span>` : "");
     } else if (ind === "pan" && todas()) {
       // panorama: calor da rede em todos os municípios + círculo onde alguma categoria piora
       const vals = GEO.map(g => contMun(g).total), lim = faixas(vals);
-      pintar(g => contMun(g).total ? corCalor(contMun(g).total, lim, CALOR.cad) : "#c9c4b8");
+      pintar(g => contMun(g).total ? corCalor(contMun(g).total, lim, CALOR.cad) : SEMREDE);
       const maxP = Math.max(1, ...RESUMO.map(R => R.pioras.length));
       $("gPts").innerHTML = GEO.filter(g => RESUMO[g.i].pioras.length && (!f.uf || g.uf === f.uf) && (!f.reg || g.reg === f.reg))
         .map(g => { const [x, y] = M.municipios[g.ibge].c, n = RESUMO[g.i].pioras.length;
           return `<circle class="pt" cx="${x}" cy="${y}" r="${(4 + 7 * Math.sqrt(n / maxP)).toFixed(1)}"/>`; }).join("");
-      legenda = legendaCalor(vals, lim, CALOR.cad, "prestadores na rede por município").replace(`background:${VAZIO}"></i>0`, `background:#c9c4b8"></i>Sem prestador`) +
+      legenda = legendaCalor(vals, lim, CALOR.cad, "prestadores na rede por município").replace(`background:${VAZIO}"></i>0`, `background:${SEMREDE}"></i>Sem prestador`) +
         `<span style="width:100%"><i style="background:#e8711a;border-radius:50%"></i>Círculo laranja = município onde o descredenciamento piora a cobertura de alguma categoria (maior = mais categorias)</span>`;
     } else if (todas()) {
       if (ind === "imp") {
@@ -495,7 +513,7 @@
       });
       legenda = [1, 2, 3, 4, 0].map(n => `<span><i style="background:${NIVEIS[n][1]}"></i>${NIVEIS[n][0]}</span>`).join("") +
         (ind === "imp" ? `<span><i style="background:${VAZIO}"></i>Sem mudança</span><span style="color:var(--suave)">cor = nível após descredenciar</span>` : "") +
-        (ind === "pan" ? `<span style="width:100%"><i style="background:#fff;border:2px solid #b3261e"></i>Contorno vermelho = cobertura piora com o descredenciamento · cor = nível após descredenciar</span>` : "");
+        (ind === "pan" ? `<span style="width:100%"><i style="background:var(--cartao);border:2px solid var(--piora)"></i>Contorno vermelho = cobertura piora com o descredenciamento · cor = nível após descredenciar</span>` : "");
     }
     $("legenda").innerHTML = legenda;
     renderSelecao();
@@ -528,7 +546,7 @@
       const R = RESUMO[g.i];
       box.innerHTML = cabec + `
         <div style="margin-top:8px">Categorias com prestador no próprio município: <strong>${R.r0}</strong> hoje → <strong>${R.r1}</strong> após descredenciar.</div>
-        ${R.pioras.length ? `<div style="margin-top:6px;color:#a3261b;font-weight:600">${R.pioras.length} categoria(s) pioram neste município:</div>
+        ${R.pioras.length ? `<div style="margin-top:6px;color:var(--perigo);font-weight:600">${R.pioras.length} categoria(s) pioram neste município:</div>
         <ul class="lista-piora">${R.pioras.map(([cat, a, d]) => `<li data-cat="${esc(cat)}">${esc(cat)} — ${NIVEIS[a][0]} → <strong>${NIVEIS[d][0]}</strong></li>`).join("")}</ul>`
         : `<div style="margin-top:6px">Nenhuma categoria piora neste município.</div>`}`;
       box.querySelectorAll("li[data-cat]").forEach(li => li.onclick = () => escolherCategoria(li.dataset.cat));
@@ -541,7 +559,7 @@
       ${linhaNivel("Hoje", a)}${linhaNivel("Após descredenciar C–F", d)}${linhaNivel("Só rede que fatura", e)}
       <div style="margin-top:6px">${NIVEIS[d][2]}</div>
       ${d === 2 ? `<div style="margin-top:6px">Limítrofes com rede: ${vizRede.map(esc).join(", ")}</div>` : ""}
-      ${d > a ? `<div style="margin-top:6px;color:#a3261b;font-weight:600">O descredenciamento piora a garantia neste município. Confirme substituto antes (RN 567/2022 e RN 585/2023).</div>` : ""}`;
+      ${d > a ? `<div style="margin-top:6px;color:var(--perigo);font-weight:600">O descredenciamento piora a garantia neste município. Confirme substituto antes (RN 567/2022 e RN 585/2023).</div>` : ""}`;
   }
 
   function renderImpacto() {
@@ -571,12 +589,12 @@
         <div class="pan-kpis">
           <div><b>${comRede} de ${gs.length}</b>municípios com prestador</div>
           <div><b>${gs.length - comRede}</b>municípios sem nenhum prestador</div>
-          <div><b>${fmt(prest)}</b>prestadores mapeados · <b style="display:inline;font-size:inherit;color:#9a5a00">${fmt(cand)}</b> candidatos</div>
-          <div><b style="color:#b3261e">${piora.length}</b>municípios onde alguma categoria piora</div>
+          <div><b>${fmt(prest)}</b>prestadores mapeados · <b style="display:inline;font-size:inherit;color:var(--alerta)">${fmt(cand)}</b> candidatos</div>
+          <div><b style="color:var(--piora)">${piora.length}</b>municípios onde alguma categoria piora</div>
         </div>
         <p style="margin:0 0 4px;font-size:13px"><strong>Cobertura por categoria</strong> — municípios em cada nível da RN 566 (hoje → após descredenciar). Clique para ver a categoria no mapa.</p>
         <div class="pan-tab"><table class="mini"><thead><tr><th>Categoria</th><th class="num">No município</th><th class="num">Limítrofe</th><th class="num">Região</th><th class="num">Fora</th><th class="num">Pioram</th></tr></thead><tbody>
-        ${linhas.map(l => `<tr data-cat="${esc(l.cat)}"><td>${esc(l.cat)}</td>${cel(l.h, l.ap, 1)}${cel(l.h, l.ap, 2)}${cel(l.h, l.ap, 3)}${cel(l.h, l.ap, 4)}<td class="num" style="${l.pi ? "color:#b3261e;font-weight:700" : ""}">${l.pi}</td></tr>`).join("")}
+        ${linhas.map(l => `<tr data-cat="${esc(l.cat)}"><td>${esc(l.cat)}</td>${cel(l.h, l.ap, 1)}${cel(l.h, l.ap, 2)}${cel(l.h, l.ap, 3)}${cel(l.h, l.ap, 4)}<td class="num" style="${l.pi ? "color:var(--piora);font-weight:700" : ""}">${l.pi}</td></tr>`).join("")}
         </tbody></table></div>
         <p style="margin:10px 0 4px;font-size:13.5px"><strong>${piora.length}</strong> município(s) com alguma categoria que piora:</p>
         <ul class="lista-piora">${piora.map(g => `<li data-i="${g.i}">${esc(g.nome)} — <strong>${RESUMO[g.i].pioras.length}</strong> categoria(s)</li>`).join("") || "<li>Nenhum.</li>"}</ul>`;
@@ -638,6 +656,26 @@
   $("ref").textContent = `bases de ${D.data_referencia}`;
   $("rodape").textContent = `Dados agregados da planilha consolidada (referência ${D.data_referencia}) · atualizado em ${D.gerado_em} · sem dados pessoais de prestadores`;
   if (M && D.cobertura) montarMapa(); else $("cardMapa").hidden = true;
+  // ------------------------------------------------------------------ TEMA
+  const PALETAS = {
+    claro: { cad: ["#eef3dc", "#cfe6a2", "#93c873", "#4a9d55", "#007A33"], cand: ["#fbe9d2", "#f6c98e", "#eb9a48", "#c96a1f", "#8f4508"] },
+    escuro: { cad: ["#335f3e", "#447f4f", "#5aa363", "#7dc67f", "#b8eda3"], cand: ["#5a3a1c", "#7e4f22", "#a8662a", "#d98335", "#ffb46e"] },
+  };
+  function aplicarTema(t) {
+    document.documentElement.setAttribute("data-tema", t);
+    try { localStorage.setItem("tema", t); } catch (e) {}
+    const cs = getComputedStyle(document.documentElement);
+    VAZIO = cs.getPropertyValue("--vazio").trim() || VAZIO;
+    SEMREDE = cs.getPropertyValue("--semrede").trim() || SEMREDE;
+    CALOR.cad = CALOR.fat = PALETAS[t].cad; CALOR.cand = PALETAS[t].cand;
+    $("tema").textContent = t === "escuro" ? "☀️ Tema claro" : "🌙 Tema escuro";
+  }
+  $("tema").onclick = () => {
+    aplicarTema(document.documentElement.getAttribute("data-tema") === "escuro" ? "claro" : "escuro");
+    render();
+  };
+  aplicarTema(document.documentElement.getAttribute("data-tema") || "claro");
+
   montarFiltros(); historico(); render();
 })();
 </script>
