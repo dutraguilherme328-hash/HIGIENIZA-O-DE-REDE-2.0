@@ -6,6 +6,11 @@ window.ACESSO = {
    "sal": "5XsAVYF5YDD6Uky8yi1UqA==",
    "iv": "ICbAt2OHb778Jfze",
    "chave": "GI8MqAhKvd2sedmagLMBghCs3dUQaGU1l8tIETkayl4AeTdhgBmZdRPcdVmbLlRd"
+  },
+  "27482b98c7d670a2a9eab0df53f4195dc942e871eaf392a08d57c97b7d5e3775": {
+   "sal": "pbWBXD1WzyobtBhUcEnczw==",
+   "iv": "6VhZyhv34zjQzCcA",
+   "chave": "SKaONC9fZ6vZ8a5zBiNtpueXvtzUdrNuDdqUF0dT14Rm12bLKAPBhJpZ63DxIivN"
   }
  }
 };
