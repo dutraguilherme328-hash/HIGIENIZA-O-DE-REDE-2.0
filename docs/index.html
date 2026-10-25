@@ -76,6 +76,16 @@
   .det dl{display:grid;grid-template-columns:170px 1fr;gap:4px 12px;margin:4px 0}
   .det dt{color:var(--suave)} .det dd{margin:0}
   @media(max-width:700px){.det dl{grid-template-columns:1fr}.abas button{padding:8px 10px;font-size:13.5px}}
+  .login-wrap{display:flex;justify-content:center;padding:48px 16px}
+  .login-card{width:100%;max-width:380px;display:flex;flex-direction:column}
+  .login-card label{font-size:13px;color:var(--suave);margin-bottom:4px}
+  .login-card input{width:100%}
+  .btn-prim{background:var(--verde);color:#fff;border-color:var(--verde);margin-top:16px;padding:10px;font-weight:600}
+  .btn-prim:disabled{opacity:.7}
+  .login-erro{background:var(--alerta-bg);color:var(--perigo);border-radius:6px;padding:8px 10px;margin-top:12px;font-size:13.5px}
+  .btn-cab{background:transparent;color:#fff;border:1px solid #ffffffaa}
+  .btn-cab:hover{background:#ffffff22}
+  [hidden]{display:none!important}
   footer{font-size:12.5px;color:var(--suave);text-align:center;margin-top:8px}
   .mapa-grade{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:18px}
   @media(max-width:900px){.mapa-grade{grid-template-columns:1fr}}
@@ -124,15 +134,32 @@
 <header style="display:flex;justify-content:space-between;align-items:center;gap:12px">
   <div>
     <h1>Higienização de Rede 2.0 · Ipasgo Saúde</h1>
-    <p>Painel de acompanhamento · GERAS / COGER · <span id="ref"></span></p>
+    <p>Painel de acompanhamento · GERAS / COGER<span id="ref"></span></p>
   </div>
-  <button type="button" id="tema" aria-label="Alternar tema claro ou escuro"></button>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+    <span id="quem" style="font-size:13px;opacity:.9"></span>
+    <button type="button" id="tema" aria-label="Alternar tema claro ou escuro"></button>
+    <button type="button" id="sair" class="btn-cab" hidden>Sair</button>
+  </div>
 </header>
-<nav class="abas" role="tablist">
+<div id="telaLogin" class="login-wrap">
+  <form id="formLogin" class="card login-card" autocomplete="on">
+    <h2 style="margin-top:0">Acesso restrito</h2>
+    <p class="nota" style="margin-top:-6px">Painel da Higienização de Rede 2.0 — uso interno da Gestão de Rede (GERAS/COGER).</p>
+    <label for="lUsuario">Usuário</label>
+    <input id="lUsuario" name="username" autocomplete="username" required autofocus>
+    <label for="lSenha" style="margin-top:10px">Senha</label>
+    <input id="lSenha" name="password" type="password" autocomplete="current-password" required>
+    <div id="lErro" class="login-erro" role="alert" hidden></div>
+    <button type="submit" id="lEntrar" class="btn-prim">Entrar</button>
+    <p class="nota" style="margin-bottom:0">Os dados ficam criptografados e só são abertos no seu navegador depois do login.</p>
+  </form>
+</div>
+<nav class="abas" role="tablist" hidden>
   <button type="button" role="tab" data-aba="painel" class="on">Painel geral</button>
   <button type="button" role="tab" data-aba="cand">Potenciais a descredenciamento <span id="abaCandN" class="badge"></span></button>
 </nav>
-<main>
+<main hidden>
 <section id="abaPainel">
   <div class="card">
     <div class="filtros">
@@ -245,10 +272,11 @@
   <footer id="rodape"></footer>
 </main>
 
-<script src="dados.js?v=202610242146"></script>
-<script src="mapa.js?v=202610242146"></script>
+<script src="acesso.js?v=202610242152"></script>
+<script src="dados.js?v=202610242152"></script>
+<script src="mapa.js?v=202610242152"></script>
 <script>
-(function () {
+function iniciarApp() {
   const D = window.DADOS;
   const CAND = ["C", "D", "E", "F"], DIV = ["G", "H"];
   const BLOCOS = Object.keys(D.legenda).sort();
@@ -695,7 +723,7 @@
   $("fMun").oninput = () => { montarFiltros(); render(); };
   $("limpar").onclick = () => { Object.keys(f).forEach(k => f[k] = ""); $("fMun").value = ""; mapa.sel = null; montarFiltros(); render(); };
 
-  $("ref").textContent = `bases de ${D.data_referencia}`;
+  $("ref").textContent = ` · bases de ${D.data_referencia}`;
   $("rodape").textContent = `Dados agregados da planilha consolidada (referência ${D.data_referencia}) · atualizado em ${D.gerado_em} · sem dados pessoais de prestadores`;
   if (M && D.cobertura) montarMapa(); else $("cardMapa").hidden = true;
   // ------------------------------------------------------------------ ABA CANDIDATOS
@@ -818,6 +846,84 @@
 
   montarFiltros(); historico(); render();
   mostrarAba(location.hash === "#candidatos" ? "cand" : "painel");
+}
+</script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const enc = new TextEncoder();
+  const de64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  const para64 = b => btoa(String.fromCharCode(...new Uint8Array(b)));
+  const SESSAO = "painel_chave";
+
+  // botão de tema já funciona na tela de login (o painel substitui este comportamento depois)
+  function textoTema() { $("tema").textContent = document.documentElement.getAttribute("data-tema") === "escuro" ? "☀️ Tema claro" : "🌙 Tema escuro"; }
+  $("tema").onclick = () => {
+    const t = document.documentElement.getAttribute("data-tema") === "escuro" ? "claro" : "escuro";
+    document.documentElement.setAttribute("data-tema", t);
+    try { localStorage.setItem("tema", t); } catch (e) {}
+    textoTema();
+  };
+  textoTema();
+
+  async function abrirDados(chaveBruta) {
+    const k = await crypto.subtle.importKey("raw", chaveBruta, "AES-GCM", false, ["decrypt"]);
+    const c = window.DADOS_CIFRADO;
+    const txt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: de64(c.iv) }, k, de64(c.ct));
+    return JSON.parse(new TextDecoder().decode(txt));
+  }
+
+  async function chavePorSenha(usuario, senha) {
+    const hash = await crypto.subtle.digest("SHA-256", enc.encode(usuario.trim().toLowerCase()));
+    const id = [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, "0")).join("");
+    const reg = (window.ACESSO && window.ACESSO.usuarios || {})[id];
+    const base = await crypto.subtle.importKey("raw", enc.encode(senha), "PBKDF2", false, ["deriveKey"]);
+    // mesmo sem usuário válido, faz a derivação (não revela se o usuário existe pelo tempo de resposta)
+    const sal = reg ? de64(reg.sal) : new Uint8Array(16);
+    const kek = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: sal, iterations: window.ACESSO.iteracoes, hash: "SHA-256" },
+      base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+    if (!reg) throw new Error("credencial");
+    return crypto.subtle.decrypt({ name: "AES-GCM", iv: de64(reg.iv) }, kek, de64(reg.chave));
+  }
+
+  function liberar(dados, usuario) {
+    window.DADOS = dados;
+    $("telaLogin").remove();
+    document.querySelector("nav.abas").hidden = false;
+    document.querySelector("main").hidden = false;
+    $("sair").hidden = false;
+    if (usuario) $("quem").textContent = usuario;
+    iniciarApp();
+  }
+
+  $("sair").onclick = () => { try { sessionStorage.removeItem(SESSAO); sessionStorage.removeItem(SESSAO + "_u"); } catch (e) {} location.replace(location.pathname); };
+
+  $("formLogin").onsubmit = async ev => {
+    ev.preventDefault();
+    const u = $("lUsuario").value, p = $("lSenha").value, btn = $("lEntrar");
+    $("lErro").hidden = true; btn.disabled = true; btn.textContent = "Verificando…";
+    try {
+      if (!window.crypto || !crypto.subtle) throw new Error("navegador");
+      const chave = await chavePorSenha(u, p);
+      const dados = await abrirDados(chave);
+      try { sessionStorage.setItem(SESSAO, para64(chave)); sessionStorage.setItem(SESSAO + "_u", u.trim().toLowerCase()); } catch (e) {}
+      liberar(dados, u.trim().toLowerCase());
+    } catch (e) {
+      $("lErro").textContent = e.message === "navegador"
+        ? "Este navegador não permite abrir dados criptografados. Use o Chrome, Edge ou Firefox atualizados, pelo endereço https."
+        : "Usuário ou senha inválidos.";
+      $("lErro").hidden = false; btn.disabled = false; btn.textContent = "Entrar";
+      $("lSenha").value = ""; $("lSenha").focus();
+    }
+  };
+
+  // já entrou nesta aba do navegador? abre direto (a sessão termina ao fechar a aba ou clicar em Sair)
+  (async () => {
+    let k = null, u = "";
+    try { k = sessionStorage.getItem(SESSAO); u = sessionStorage.getItem(SESSAO + "_u") || ""; } catch (e) {}
+    if (!k || !window.crypto || !crypto.subtle) return;
+    try { liberar(await abrirDados(de64(k)), u); } catch (e) { try { sessionStorage.removeItem(SESSAO); } catch (x) {} }
+  })();
 })();
 </script>
 </body>

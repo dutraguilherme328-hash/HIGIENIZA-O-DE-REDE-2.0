@@ -1,7 +1,7 @@
 # Painel Higienização de Rede 2.0 — site estático (GitHub Pages)
 
 Site só de visualização, alimentado pela planilha consolidada do projeto.
-O painel geral mostra números agregados. A aba **Potenciais a descredenciamento** lista os candidatos dos blocos C–F pelo **nome**. Ela não traz CPF/CNPJ, endereço, telefone nem valores.
+O acesso é por **usuário e senha**, e os dados são criptografados. O painel geral mostra números agregados. A aba **Potenciais a descredenciamento** lista os candidatos dos blocos C–F pelo **nome**. Ela não traz CPF/CNPJ, endereço, telefone nem valores.
 
 ## Como funciona
 
@@ -17,6 +17,32 @@ Regras de proteção aplicadas em `gerar_dados_site.py`:
 - **Contagens** são feitas por UF × região × categoria × bloco × classe de rede.
 - **Municípios** aparecem só com totais, sem cruzar com categoria nem com bloco.
 - **Valores em R$** aparecem só por bloco e por região, e somente para grupos com 3 ou mais prestadores.
+
+## Login (usuário e senha)
+
+O site abre numa tela de login. Todos os dados (`docs/dados.js`) ficam **criptografados com AES-256-GCM**: sem um usuário e senha válidos, ninguém consegue lê-los, nem baixando o repositório. A decifragem acontece só no navegador de quem entra.
+
+**Como funciona:**
+- **Chave do site:** fica em `dados\.chave_site` e **nunca vai para o GitHub**. Sem ela não é possível atualizar o site. Guarde uma cópia em local seguro.
+- **Usuários e senhas:** cada usuário tem a chave do site protegida pela própria senha (PBKDF2-SHA256, 600 mil iterações), em `docs/acesso.js`. Os nomes de usuário ficam só como hash, e as senhas não são guardadas em lugar nenhum.
+- **Sessão:** vale até fechar a aba do navegador ou clicar em **Sair**.
+
+**Gerenciar usuários** (requer `pip install cryptography`):
+```bat
+python scripts\usuarios.py adicionar maria --gerar     (gera uma senha forte e mostra uma vez)
+python scripts\usuarios.py adicionar joao              (você digita a senha, mínimo 10 caracteres)
+python scripts\usuarios.py trocar guilherme
+python scripts\usuarios.py remover maria
+python scripts\usuarios.py listar
+```
+Depois de qualquer mudança, publique com `atualizar_site.bat`.
+
+**Para cortar de vez o acesso de alguém** que possa ter guardado uma cópia antiga do site, rode `python scripts\usuarios.py nova-chave`. Depois recadastre os usuários e rode `atualizar_site.bat`.
+
+**Limitações:**
+- não há "esqueci a senha";
+- não há registro de acessos;
+- não há bloqueio por tentativas, por isso as senhas precisam ser fortes.
 
 ## Aba "Potenciais a descredenciamento"
 
@@ -87,7 +113,7 @@ Esse comando gera `scripts/base_geografica.json`, com região e limítrofes, e `
 1. Salve a nova planilha em `dados\HIGIENIZACAO_REDE_CONSOLIDADA.xlsx`. Ela precisa ter a aba `CONSOLIDADO`.
 2. Dê dois cliques em `atualizar_site.bat`. Ele gera o resumo, faz o commit e envia ao GitHub.
 
-O computador precisa ter Python com `pandas` e `openpyxl` (`pip install pandas openpyxl`) e o Git configurado com acesso ao repositório.
+O computador precisa ter Python com `pandas` e `openpyxl` (`pip install pandas openpyxl cryptography`) e o Git configurado com acesso ao repositório.
 
 Para gerar a planilha a partir das 3 bases (faturamento, FACIL e BI CODER), rode:
 ```bat
@@ -100,7 +126,7 @@ Abra `docs/index.html` no navegador. Funciona sem servidor.
 
 ## Limitações
 
-- **O site e o repositório são públicos.** Qualquer pessoa com o link vê os números e a **lista nominal de potenciais a descredenciamento**, que inclui pessoas físicas, antes de qualquer notificação. Essa foi uma decisão consciente do responsável, com riscos de LGPD e de imagem. O site pede para não ser indexado por buscadores, mas não tem login. Para restringir o acesso, as alternativas são uma aba criptografada com senha ou o painel Django (VRS 2) com login.
+- **O repositório é público, mas os dados vão criptografados.** O que fica legível é só o código da página, a malha do mapa (dados públicos do IBGE) e os hashes de acesso. Versões publicadas antes do login (até o commit `42f9c79`) continuam no histórico do Git, até ele ser reescrito.
 - A tabela de municípios não cruza com categoria nem com bloco, por proteção.
 - O mapa de cobertura mostra o **nível** por município × categoria, sem contagens. Ainda assim, quem conhece a rede local pode deduzir onde há candidatos. Avalie isso antes de divulgar o link.
 - A cobertura é medida por categoria do BI CODER, sem especialidade médica, e não considera prestadores fora da rede nem prazos de atendimento.

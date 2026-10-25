@@ -11,6 +11,7 @@ Uso:
     python scripts/gerar_dados_site.py dados/HIGIENIZACAO_REDE_CONSOLIDADA.xlsx
 """
 import json
+import sys
 import re
 import sys
 from datetime import datetime
@@ -23,6 +24,8 @@ CANDIDATOS = list("CDEF")
 DIVERGENCIAS = list("GH")
 RAIZ = Path(__file__).resolve().parent.parent
 SAIDA = RAIZ / "docs" / "dados.js"
+sys.path.insert(0, str(RAIZ / "scripts"))
+import cripto  # noqa: E402
 BASE_GEO = RAIZ / "scripts" / "base_geografica.json"
 
 # Histórico da 1ª higienização (bases jan/fev 2026) — exibido para manter a referência dos 390
@@ -169,12 +172,14 @@ def main(caminho):
     }
     dados["candidatos"], dados["tem_especialidade"] = lista_candidatos(df)
     SAIDA.parent.mkdir(parents=True, exist_ok=True)
-    SAIDA.write_text("window.DADOS = " + json.dumps(dados, ensure_ascii=False) + ";\n", encoding="utf-8")
+    # os dados vão CIFRADOS (AES-256-GCM) — só quem tem usuário e senha consegue ler no navegador
+    texto = json.dumps(dados, ensure_ascii=False, separators=(",", ":"))
+    SAIDA.write_text("window.DADOS_CIFRADO = " + json.dumps(cripto.cifrar(texto, cripto.chave_site())) + ";\n", encoding="utf-8")
     # força o navegador a buscar a versão nova dos dados (evita cache antigo do GitHub Pages)
     versao = datetime.now().strftime("%Y%m%d%H%M")
     pagina = RAIZ / "docs" / "index.html"
     html = pagina.read_text(encoding="utf-8")
-    html = re.sub(r'src="(dados|mapa)\.js(\?v=\d+)?"', lambda m: f'src="{m.group(1)}.js?v={versao}"', html)
+    html = re.sub(r'src="(dados|mapa|acesso)\.js(\?v=\d+)?"', lambda m: f'src="{m.group(1)}.js?v={versao}"', html)
     pagina.write_text(html, encoding="utf-8")
     print(f"OK: {len(df)} prestadores agregados -> {SAIDA} (versão {versao})")
 
