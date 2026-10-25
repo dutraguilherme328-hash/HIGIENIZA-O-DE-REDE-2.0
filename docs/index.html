@@ -52,6 +52,8 @@
   .mapa-grade{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:18px}
   @media(max-width:900px){.mapa-grade{grid-template-columns:1fr}}
   @media(max-width:600px){.mapa-ctrl>div{flex:1 1 100%}.mapa-ctrl select{width:100%}#mapa text{font-size:16px}}
+  .mapa-area,.mapa-lado{min-width:0}
+  .mapa-ctrl select{max-width:100%}
   .mapa-ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:10px}
   .mapa-ctrl label{font-size:12px;color:var(--suave);display:block}
   .seg{display:inline-flex;border:1px solid var(--verde);border-radius:6px;overflow:hidden}
@@ -65,6 +67,17 @@
   #mapa.camada-reg .r{stroke-width:2.2}
   #mapa .r-fill{stroke:#fff;stroke-width:1.5;cursor:pointer}
   #mapa .sel{stroke:var(--tinta)!important;stroke-width:2.6!important}
+  #mapa .piora{stroke:#b3261e;stroke-width:2.2}
+  #mapa .pt{fill:#e8711a;fill-opacity:.85;stroke:#fff;stroke-width:1.2;pointer-events:none}
+  .pan-kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px}
+  .pan-kpis div{background:var(--creme);border-radius:8px;padding:8px 10px;font-size:12.5px;color:var(--suave)}
+  .pan-kpis b{display:block;font-size:20px;color:var(--tinta)}
+  .pan-tab{max-height:360px;overflow:auto}
+  .pan-tab th{position:sticky;top:0;font-size:11.5px;padding:5px 6px}
+  .pan-tab td{font-size:12px;padding:4px 5px;white-space:nowrap}
+  .pan-tab td:first-child{white-space:normal;min-width:110px}
+  .pan-tab table{min-width:0}
+  .pan-tab tr[data-cat]{cursor:pointer}.pan-tab tr[data-cat]:hover td{background:#e6f3ea}
   #mapa .apagado{opacity:.25}
   #mapa text{font-size:12px;font-weight:600;fill:#1d2a22;paint-order:stroke;stroke:#fff;stroke-width:3px;pointer-events:none}
   .dica{position:absolute;pointer-events:none;background:#1d2a22;color:#fff;font-size:12.5px;padding:6px 9px;border-radius:6px;max-width:240px;z-index:2;line-height:1.35}
@@ -115,12 +128,13 @@
           </div>
           <div><label for="mInd">Indicador</label>
             <select id="mInd">
+              <option value="pan" selected>Panorama geral — rede + impacto</option>
               <option value="cad">Prestadores na rede (mapa de calor)</option>
               <option value="fat">Prestadores que faturam (mapa de calor)</option>
               <option value="cand">Candidatos a descredenciamento C–F (mapa de calor)</option>
               <option value="cob0">Cobertura RN 566 — hoje</option>
               <option value="cob1">Cobertura RN 566 — após descredenciar C–F</option>
-              <option value="imp" selected>Impacto — onde a cobertura piora</option>
+              <option value="imp">Impacto — onde a cobertura piora</option>
             </select></div>
           <div id="mCatBox"><label for="mCat">Categoria</label><select id="mCat"></select></div>
         </div>
@@ -313,7 +327,7 @@
                   cand: ["#fbe9d2", "#f6c98e", "#eb9a48", "#c96a1f", "#8f4508"] };
   const VAZIO = "#e2ded3";
   const ROTULO_IND = { cad: "prestadores na rede", fat: "prestadores que faturam", cand: "candidatos C–F" };
-  const mapa = { camada: "mun", ind: "imp", cat: "", sel: null };
+  const mapa = { camada: "mun", ind: "pan", cat: "", sel: null };
   const ACENTOS = { "SAO PATRICIO I": "São Patrício I", "SAO PATRICIO II": "São Patrício II" };
   const titulo = s => ACENTOS[s] || s.toLowerCase().split(" ")
     .map(p => /^(i|ii|iii|iv)$/.test(p) ? p.toUpperCase() : ["de", "da", "do", "das", "dos"].includes(p) ? p : p.charAt(0).toUpperCase() + p.slice(1))
@@ -355,7 +369,7 @@
   }
   function escolherCategoria(cat) {
     f.cat = cat;
-    if (cat && !mapa.ind.startsWith("cob") && mapa.ind !== "imp") { mapa.ind = "imp"; $("mInd").value = "imp"; }
+    if (cat && !mapa.ind.startsWith("cob") && mapa.ind !== "imp" && mapa.ind !== "pan") { mapa.ind = "pan"; $("mInd").value = "pan"; }
     montarFiltros(); render();
   }
 
@@ -371,6 +385,7 @@
       `<g id="gMun">${GEO.map(g => `<path class="m" data-i="${g.i}" d="${M.municipios[g.ibge].d}"/>`).join("")}</g>` +
       `<g id="gRegF">${REGIOES.map((r, j) => `<path class="r-fill" data-r="${j}" d="${M.regioes[r].d}"/>`).join("")}</g>` +
       `<g id="gReg">${REGIOES.map(r => `<path class="r" d="${M.regioes[r].d}"/>`).join("")}</g>` +
+      `<g id="gPts"></g>` +
       `<g id="gRot">${REGIOES.map(r => `<text x="${M.regioes[r].c[0]}" y="${M.regioes[r].c[1]}" text-anchor="middle">${esc(titulo(r))}</text>`).join("")}</g>`;
     svg.addEventListener("mousemove", ev => {
       const t = ev.target, dica = $("dica");
@@ -404,7 +419,7 @@
   function textoMun(g) {
     const c = contMun(g), R = RESUMO[g.i];
     let t = `<strong>${esc(g.nome)}</strong> · ${esc(titulo(g.reg))}<br>${fmt(c.total)} na rede · ${fmt(c.fat)} faturam · ${fmt(c.cand)} candidatos`;
-    if (mapa.ind.startsWith("cob") || mapa.ind === "imp") {
+    if (mapa.ind.startsWith("cob") || mapa.ind === "imp" || mapa.ind === "pan") {
       if (todas()) t += `<br>Categorias com prestador no município: ${R.r0}${R.r1 !== R.r0 ? " → " + R.r1 : ""}<br>Categorias que pioram: ${R.pioras.length}`;
       else { const a = nivelDe(g, 0), d = nivelDe(g, 1); t += `<br>${esc(mapa.cat)}: ${NIVEIS[a][0]}${a !== d ? " → " + NIVEIS[d][0] : ""}`; }
     }
@@ -418,7 +433,8 @@
   function renderMapa() {
     if (!M || !D.cobertura) return;
     sincronizarCategoria();
-    const svg = $("mapa"), ind = mapa.ind, cob = ind.startsWith("cob") || ind === "imp";
+    const svg = $("mapa"), ind = mapa.ind, cob = ind.startsWith("cob") || ind === "imp" || ind === "pan";
+    $("gPts").innerHTML = "";
     svg.classList.toggle("camada-reg", mapa.camada === "reg");
     const filtroAtivo = g => (!f.uf || g.uf === f.uf) && (!f.reg || g.reg === f.reg);
     const regFill = mapa.camada === "reg" && !cob;
@@ -429,6 +445,7 @@
       p.setAttribute("fill", cor(g));
       p.classList.toggle("apagado", !filtroAtivo(g));
       p.classList.toggle("sel", !!mapa.sel && mapa.sel.tipo === "mun" && mapa.sel.i === g.i);
+      p.classList.remove("piora");
     });
 
     let legenda = "";
@@ -448,6 +465,16 @@
       pintar(g => corCalor(contMun(g)[campo], lim, pal));
       legenda = legendaCalor(vals, lim, pal, `${ROTULO_IND[ind]} por ${mapa.camada === "reg" ? "região" : "município"}`) +
         (f.cat ? `<span style="color:#9a5a00;width:100%">O mapa de calor soma todas as categorias — por proteção, ele não é detalhado por categoria. Para ver ${esc(f.cat)}, use os indicadores de Cobertura ou Impacto.</span>` : "");
+    } else if (ind === "pan" && todas()) {
+      // panorama: calor da rede em todos os municípios + círculo onde alguma categoria piora
+      const vals = GEO.map(g => contMun(g).total), lim = faixas(vals);
+      pintar(g => contMun(g).total ? corCalor(contMun(g).total, lim, CALOR.cad) : "#c9c4b8");
+      const maxP = Math.max(1, ...RESUMO.map(R => R.pioras.length));
+      $("gPts").innerHTML = GEO.filter(g => RESUMO[g.i].pioras.length && (!f.uf || g.uf === f.uf) && (!f.reg || g.reg === f.reg))
+        .map(g => { const [x, y] = M.municipios[g.ibge].c, n = RESUMO[g.i].pioras.length;
+          return `<circle class="pt" cx="${x}" cy="${y}" r="${(4 + 7 * Math.sqrt(n / maxP)).toFixed(1)}"/>`; }).join("");
+      legenda = legendaCalor(vals, lim, CALOR.cad, "prestadores na rede por município").replace(`background:${VAZIO}"></i>0`, `background:#c9c4b8"></i>Sem prestador`) +
+        `<span style="width:100%"><i style="background:#e8711a;border-radius:50%"></i>Círculo laranja = município onde o descredenciamento piora a cobertura de alguma categoria (maior = mais categorias)</span>`;
     } else if (todas()) {
       if (ind === "imp") {
         const vals = RESUMO.map(R => R.pioras.length), lim = faixas(vals);
@@ -461,10 +488,14 @@
     } else {
       pintar(g => {
         const a = nivelDe(g, 0), d = nivelDe(g, 1);
-        return ind === "cob0" ? NIVEIS[a][1] : ind === "cob1" ? NIVEIS[d][1] : (d !== a ? NIVEIS[d][1] : VAZIO);
+        return ind === "cob0" ? NIVEIS[a][1] : (ind === "cob1" || ind === "pan") ? NIVEIS[d][1] : (d !== a ? NIVEIS[d][1] : VAZIO);
+      });
+      if (ind === "pan") document.querySelectorAll("#gMun path").forEach(p => {
+        const g = GEO[+p.dataset.i]; p.classList.toggle("piora", pioraNivel(nivelDe(g, 0), nivelDe(g, 1)));
       });
       legenda = [1, 2, 3, 4, 0].map(n => `<span><i style="background:${NIVEIS[n][1]}"></i>${NIVEIS[n][0]}</span>`).join("") +
-        (ind === "imp" ? `<span><i style="background:${VAZIO}"></i>Sem mudança</span><span style="color:var(--suave)">cor = nível após descredenciar</span>` : "");
+        (ind === "imp" ? `<span><i style="background:${VAZIO}"></i>Sem mudança</span><span style="color:var(--suave)">cor = nível após descredenciar</span>` : "") +
+        (ind === "pan" ? `<span style="width:100%"><i style="background:#fff;border:2px solid #b3261e"></i>Contorno vermelho = cobertura piora com o descredenciamento · cor = nível após descredenciar</span>` : "");
     }
     $("legenda").innerHTML = legenda;
     renderSelecao();
@@ -526,11 +557,29 @@
 
     if (todas()) {
       const piora = gs.filter(g => RESUMO[g.i].pioras.length).sort((x, y) => RESUMO[y.i].pioras.length - RESUMO[x.i].pioras.length || x.nome.localeCompare(y.nome, "pt-BR"));
+      const comRede = gs.filter(g => contMun(g).total).length, comCand = gs.filter(g => contMun(g).cand).length;
+      const prest = gs.reduce((x, g) => x + contMun(g).total, 0), cand = gs.reduce((x, g) => x + contMun(g).cand, 0);
+      // nível por categoria: hoje → após (municípios da área)
+      const linhas = CATS.map(cat => {
+        const [a, d] = D.cobertura[cat], h = [0, 0, 0, 0, 0], ap = [0, 0, 0, 0, 0]; let pi = 0;
+        for (const g of gs) { h[+a[g.i]]++; ap[+d[g.i]]++; if (pioraNivel(+a[g.i], +d[g.i])) pi++; }
+        return { cat, h, ap, pi };
+      }).sort((x, y) => y.pi - x.pi || y.h[1] - x.h[1]);
+      const cel = (h, ap, n) => `<td class="num">${h[n]}${ap[n] !== h[n] ? ` → <strong>${ap[n]}</strong>` : ""}</td>`;
       $("impacto").innerHTML = `
-        <h3 style="font-size:15px;margin:0 0 6px">Impacto em todas as categorias · ${esc(area)}</h3>
-        <p style="margin:0 0 4px;font-size:13.5px"><strong>${piora.length}</strong> município(s) com alguma categoria que piora:</p>
-        <ul class="lista-piora">${piora.map(g => `<li data-i="${g.i}">${esc(g.nome)} — <strong>${RESUMO[g.i].pioras.length}</strong> categoria(s)</li>`).join("") || "<li>Nenhum.</li>"}</ul>
-        ${tabRanking(ranking, "Categorias afetadas (clique para ver no mapa)")}`;
+        <h3 style="font-size:15px;margin:0 0 8px">Panorama · todas as categorias · ${esc(area)}</h3>
+        <div class="pan-kpis">
+          <div><b>${comRede} de ${gs.length}</b>municípios com prestador</div>
+          <div><b>${gs.length - comRede}</b>municípios sem nenhum prestador</div>
+          <div><b>${fmt(prest)}</b>prestadores mapeados · <b style="display:inline;font-size:inherit;color:#9a5a00">${fmt(cand)}</b> candidatos</div>
+          <div><b style="color:#b3261e">${piora.length}</b>municípios onde alguma categoria piora</div>
+        </div>
+        <p style="margin:0 0 4px;font-size:13px"><strong>Cobertura por categoria</strong> — municípios em cada nível da RN 566 (hoje → após descredenciar). Clique para ver a categoria no mapa.</p>
+        <div class="pan-tab"><table class="mini"><thead><tr><th>Categoria</th><th class="num">No município</th><th class="num">Limítrofe</th><th class="num">Região</th><th class="num">Fora</th><th class="num">Pioram</th></tr></thead><tbody>
+        ${linhas.map(l => `<tr data-cat="${esc(l.cat)}"><td>${esc(l.cat)}</td>${cel(l.h, l.ap, 1)}${cel(l.h, l.ap, 2)}${cel(l.h, l.ap, 3)}${cel(l.h, l.ap, 4)}<td class="num" style="${l.pi ? "color:#b3261e;font-weight:700" : ""}">${l.pi}</td></tr>`).join("")}
+        </tbody></table></div>
+        <p style="margin:10px 0 4px;font-size:13.5px"><strong>${piora.length}</strong> município(s) com alguma categoria que piora:</p>
+        <ul class="lista-piora">${piora.map(g => `<li data-i="${g.i}">${esc(g.nome)} — <strong>${RESUMO[g.i].pioras.length}</strong> categoria(s)</li>`).join("") || "<li>Nenhum.</li>"}</ul>`;
     } else {
       const cont = k => [1, 2, 3, 4, 0].map(n => gs.filter(g => nivelDe(g, k) === n).length);
       const antes = cont(0), depois = cont(1);
