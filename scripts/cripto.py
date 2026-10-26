@@ -57,6 +57,14 @@ def ler_acesso() -> dict:
 
 def gravar_acesso(acesso: dict):
     ACESSO.write_text("window.ACESSO = " + json.dumps(acesso, ensure_ascii=False, indent=1) + ";\n", encoding="utf-8")
+    # muda a versão no index.html para o navegador não usar a lista de acessos antiga em cache
+    import re
+    from datetime import datetime
+    pagina = RAIZ / "docs" / "index.html"
+    if pagina.exists():
+        html = pagina.read_text(encoding="utf-8")
+        html = re.sub(r'src="acesso\.js(\?v=\d+)?"', f'src="acesso.js?v={datetime.now():%Y%m%d%H%M%S}"', html)
+        pagina.write_text(html, encoding="utf-8")
 
 
 def embrulhar(senha: str, chave: bytes) -> dict:
