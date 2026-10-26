@@ -86,6 +86,24 @@
   .btn-cab{background:transparent;color:#fff;border:1px solid #ffffffaa}
   .btn-cab:hover{background:#ffffff22}
   [hidden]{display:none!important}
+  .funil{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px}
+  @media(max-width:800px){.funil{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .funil div{background:var(--caixa);border-radius:8px;padding:10px 12px;border-top:4px solid var(--linha)}
+  .funil b{display:block;font-size:22px}
+  .funil span{font-size:12.5px;color:var(--suave)}
+  .regra{display:grid;grid-template-columns:52px minmax(0,1fr) 120px;gap:12px;padding:12px 0;border-bottom:1px solid var(--linha);align-items:start}
+  .regra:last-child{border-bottom:none}
+  .regra .rid{font-weight:700;color:var(--verde2);font-variant-numeric:tabular-nums}
+  .regra h3{margin:0 0 4px;font-size:15px}
+  .regra p{margin:2px 0;font-size:13.5px;line-height:1.45}
+  .regra .rotulo{color:var(--suave);font-weight:600}
+  .regra .qtd{text-align:right}
+  .regra .qtd b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+  .regra .qtd small{color:var(--suave);font-size:12px}
+  .regra .status{display:inline-block;font-size:11.5px;border-radius:999px;padding:1px 8px;margin-left:6px;vertical-align:2px;background:var(--ok-bg);color:var(--verde2)}
+  .regra .status.pend{background:var(--alerta-bg);color:var(--alerta)}
+  .regra button{margin-top:6px;font-size:12.5px;padding:4px 10px}
+  @media(max-width:600px){.regra{grid-template-columns:40px minmax(0,1fr)}.regra .qtd{grid-column:2;text-align:left}}
   footer{font-size:12.5px;color:var(--suave);text-align:center;margin-top:8px}
   .mapa-grade{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:18px}
   @media(max-width:900px){.mapa-grade{grid-template-columns:1fr}}
@@ -158,6 +176,7 @@
 <nav class="abas" role="tablist" hidden>
   <button type="button" role="tab" data-aba="painel" class="on">Painel geral</button>
   <button type="button" role="tab" data-aba="cand">Potenciais a descredenciamento <span id="abaCandN" class="badge"></span></button>
+  <button type="button" role="tab" data-aba="regras">Regras do projeto</button>
 </nav>
 <main hidden>
 <section id="abaPainel">
@@ -269,12 +288,21 @@
     <p class="nota" id="cNotaEsp"></p>
   </div>
 </section>
+
+<section id="abaRegras" hidden>
+  <div class="card">
+    <h2>Regras do projeto</h2>
+    <p class="nota" style="margin-top:-4px">Critérios de escopo e de decisão aplicados na Higienização de Rede 2.0, na ordem em que são aplicados a cada prestador. Base de referência: <span class="refData"></span>. Os números mostram quantos prestadores cada regra afeta.</p>
+    <div id="funil" class="funil"></div>
+  </div>
+  <div id="listaRegras"></div>
+</section>
   <footer id="rodape"></footer>
 </main>
 
-<script src="acesso.js?v=202610242152"></script>
-<script src="dados.js?v=202610242152"></script>
-<script src="mapa.js?v=202610242152"></script>
+<script src="acesso.js?v=202610260909"></script>
+<script src="dados.js?v=202610260909"></script>
+<script src="mapa.js?v=202610260909"></script>
 <script>
 function iniciarApp() {
   const D = window.DADOS;
@@ -813,14 +841,54 @@ function iniciarApp() {
   $("cLimpar").onclick = () => { Object.keys(fc).forEach(k => fc[k] = ""); $("cBusca").value = ""; renderCand(); };
   $("cCsv").onclick = baixarCsv;
 
-  function mostrarAba(aba) {
-    const cand = aba === "cand" && LISTA_CAND.length;
-    $("abaPainel").hidden = !!cand; $("abaCand").hidden = !cand;
-    document.querySelectorAll(".abas button").forEach(b => { const on = b.dataset.aba === (cand ? "cand" : "painel"); b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
-    if (cand) renderCand();
+  // ------------------------------------------------------------------ ABA REGRAS
+  function renderRegras() {
+    const R = D.regras || [];
+    const qtd = id => (R.find(r => r.id === id) || {}).qtd || 0;
+    const fora = ["R01", "R02", "R03", "R04", "R05"].reduce((x, id) => x + qtd(id), 0);
+    const prot = ["R06", "R07", "R08"].reduce((x, id) => x + qtd(id), 0);
+    $("funil").innerHTML = [
+      [fmt(D.total), "prestadores analisados (3 bases cruzadas)", "var(--linha)"],
+      [fmt(fora), "fora do escopo (grupo 1)", "#8f8a80"],
+      [fmt(prot), "protegidos: faturam, recentes ou só em uma base (grupo 2)", "var(--verde)"],
+      [fmt(qtd("R09")), "potenciais a descredenciamento (grupo 3)", "#e8711a"],
+    ].map(([n, t, c]) => `<div style="border-top-color:${c}"><b>${n}</b><span>${t}</span></div>`).join("");
+    const grupos = [...new Set(R.map(r => r.grupo))];
+    $("listaRegras").innerHTML = grupos.map(g => `<div class="card"><h2>${esc(g)}</h2>${R.filter(r => r.grupo === g).map(r => `
+      <div class="regra">
+        <div class="rid">${r.id}</div>
+        <div>
+          <h3>${esc(r.titulo)}<span class="status${r.status === "Aplicada" ? "" : " pend"}">${esc(r.status)}</span></h3>
+          <p><span class="rotulo">Critério:</span> ${esc(r.criterio)}</p>
+          <p><span class="rotulo">Efeito:</span> ${esc(r.efeito)}</p>
+          <p><span class="rotulo">Fonte:</span> ${esc(r.fonte)}${r.bloco ? ` · <span class="rotulo">Bloco:</span> ${r.bloco.length === 1 ? `<span class="tag ${r.bloco}">${r.bloco}</span>` : esc(r.bloco)}` : ""}</p>
+          ${["C", "D", "E", "F"].includes(r.bloco) || r.bloco === "C–F" ? `<button type="button" data-ver="${r.bloco.length === 1 ? r.bloco : ""}">Ver estes prestadores na lista →</button>` : ""}
+        </div>
+        <div class="qtd">${r.qtd === null || r.qtd === undefined ? "" : `<b>${fmt(r.qtd)}</b><small>${esc(r.rotulo)}</small>`}</div>
+      </div>`).join("")}</div>`).join("");
+    $("listaRegras").querySelectorAll("button[data-ver]").forEach(bt => bt.onclick = () => {
+      Object.keys(fc).forEach(k => fc[k] = ""); $("cBusca").value = ""; fc.bloco = bt.dataset.ver;
+      location.hash = "candidatos";
+    });
   }
-  document.querySelectorAll(".abas button").forEach(b => b.onclick = () => { location.hash = b.dataset.aba === "cand" ? "candidatos" : ""; mostrarAba(b.dataset.aba); });
-  window.addEventListener("hashchange", () => mostrarAba(location.hash === "#candidatos" ? "cand" : "painel"));
+
+  const ABAS = { painel: "abaPainel", cand: "abaCand", regras: "abaRegras" };
+  const HASH = { cand: "#candidatos", regras: "#regras" };
+  const abaDoHash = () => location.hash === "#candidatos" && LISTA_CAND.length ? "cand" : location.hash === "#regras" ? "regras" : "painel";
+  function mostrarAba(aba) {
+    if (aba === "cand" && !LISTA_CAND.length) aba = "painel";
+    Object.entries(ABAS).forEach(([k, id]) => $(id).hidden = k !== aba);
+    document.querySelectorAll(".abas button").forEach(b => { const on = b.dataset.aba === aba; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
+    if (aba === "cand") renderCand();
+    if (aba === "regras") renderRegras();
+    window.scrollTo(0, 0);
+  }
+  document.querySelectorAll(".abas button").forEach(b => b.onclick = () => {
+    const h = HASH[b.dataset.aba] || "";
+    if (location.hash !== h) { if (h) location.hash = h; else history.replaceState(null, "", location.pathname + location.search); }
+    mostrarAba(b.dataset.aba);
+  });
+  window.addEventListener("hashchange", () => mostrarAba(abaDoHash()));
   $("abaCandN").textContent = LISTA_CAND.length ? fmt(LISTA_CAND.length) : "";
   document.querySelectorAll(".refData").forEach(e => e.textContent = D.data_referencia);
 
@@ -845,7 +913,7 @@ function iniciarApp() {
   aplicarTema(document.documentElement.getAttribute("data-tema") || "claro");
 
   montarFiltros(); historico(); render();
-  mostrarAba(location.hash === "#candidatos" ? "cand" : "painel");
+  mostrarAba(abaDoHash());
 }
 </script>
 <script>

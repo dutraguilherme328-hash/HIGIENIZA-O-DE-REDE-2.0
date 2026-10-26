@@ -23,8 +23,17 @@ VERDE = "007A33"
 LIMA = "BBDD00"
 CREME = "F0EDE4"
 
-# reguladores e rede própria Ipasgo não são candidatos a descredenciamento
+# Regras de escopo — nunca são candidatos a descredenciamento:
+#   - enfermeiros e derivados (qualquer categoria com "ENFERM": ENFERMAGEM, ENFERMEIRO REGULADOR...)
+#   - médico regulador
+#   - rede própria Ipasgo (CLINICA IPASGO)
 CATEGORIAS_EXCLUIDAS = {"MEDICO REGULADOR", "ENFERMEIRO REGULADOR", "CLINICA IPASGO"}
+PADRAO_EXCLUIDO = re.compile(r"ENFERM", re.I)
+
+
+def categoria_excluida(cat):
+    cat = "" if cat is None or (isinstance(cat, float) and cat != cat) else str(cat)
+    return cat in CATEGORIAS_EXCLUIDAS or bool(PADRAO_EXCLUIDO.search(cat))
 NOMES_TECNICOS = re.compile(r"LIB\. SEM LOCAL|REEMBOLSO", re.I)
 
 LEGENDA_BLOCOS = {
@@ -36,7 +45,7 @@ LEGENDA_BLOCOS = {
     "F": "Candidato com EFEITO CUMULATIVO — vários da mesma localidade/categoria; escalonar lotes",
     "G": "Fatura mas não consta no BI CODER — divergência cadastral a corrigir",
     "H": "Sem faturamento e presente em só uma base cadastral (FACIL × CODER) — saneamento cadastral",
-    "I": "Fora do escopo — regulador, rede própria Ipasgo, registro técnico ou sem documento",
+    "I": "Fora do escopo — enfermeiros e derivados, médico regulador, rede própria Ipasgo, registro técnico ou sem documento",
 }
 
 
@@ -247,7 +256,7 @@ def consolidar(fat_csv, facil_csv, coder_xlsx, data_ref):
 
     # candidatos (sem faturamento, não recentes, no CODER e no FACIL, fora de exclusões)
     excluido = (
-        base["CATEGORIA_CODER"].isin(CATEGORIAS_EXCLUIDAS)
+        base["CATEGORIA_CODER"].apply(categoria_excluida)
         | base["TECNICO"]
         | (base["TIPO_DOC"] == "SEM DOCUMENTO")
     )
@@ -279,7 +288,7 @@ def consolidar(fat_csv, facil_csv, coder_xlsx, data_ref):
     # bloco de decisão
     def bloco(r):
         if (
-            r.CATEGORIA_CODER in CATEGORIAS_EXCLUIDAS
+            categoria_excluida(r.CATEGORIA_CODER)
             or r.TECNICO
             or r.TIPO_DOC == "SEM DOCUMENTO"
         ):

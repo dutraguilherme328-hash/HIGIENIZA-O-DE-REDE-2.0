@@ -44,6 +44,18 @@ Depois de qualquer mudança, publique com `atualizar_site.bat`.
 - não há registro de acessos;
 - não há bloqueio por tentativas, por isso as senhas precisam ser fortes.
 
+## Aba "Regras do projeto"
+
+A aba lista as 20 regras de escopo e de decisão, na ordem em que são aplicadas, e mostra quantos prestadores cada uma afeta. O link direto é `.../#regras`. As regras estão organizadas em seis grupos:
+1. **Fora do escopo:** enfermeiros e derivados, médico regulador, rede própria Ipasgo, registros técnicos e registros sem CPF/CNPJ.
+2. **Protegidos:** quem faturou em 12 meses, quem foi credenciado há menos de 1 ano e quem está em só uma base cadastral.
+3. **Candidatos e blocos:** C (rede suficiente), D (rede mínima), E (único na localidade) e F (efeito cumulativo).
+4. **Normas:** RN 567, RN 585, RN 566 e Lei 13.003.
+5. **Tratamento dos dados:** normalização de CPF/CNPJ, categoria oficial do BI CODER e score.
+6. **Regras da 1ª higienização ainda pendentes de base:** solicitações e execuções de serviços.
+
+Os textos e as contagens são gerados em `scripts/gerar_dados_site.py` (função `regras_do_projeto`). A regra em si é aplicada em `scripts/gerar_consolidado.py`. Ao mudar uma regra, atualize os dois arquivos.
+
 ## Aba "Potenciais a descredenciamento"
 
 A aba lista os candidatos dos blocos C–F. Para cada um, mostra:
