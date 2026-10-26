@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Higienização de Rede 2.0</title>
+<title>[EM CONSTRUÇÃO] Higienização de Rede 2.0</title>
 <script>
   (function () {
     var t = null;
@@ -104,6 +104,12 @@
   .regra .status.pend{background:var(--alerta-bg);color:var(--alerta)}
   .regra button{margin-top:6px;font-size:12.5px;padding:4px 10px}
   @media(max-width:600px){.regra{grid-template-columns:40px minmax(0,1fr)}.regra .qtd{grid-column:2;text-align:left}}
+  /* ---- marca d'água "em construção" — para remover na versão final, apague o bloco .marca-construcao e o <div class="marca-construcao"> ---- */
+  .marca-construcao{position:fixed;inset:0;z-index:50;pointer-events:none;background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22520%22%20height%3D%22300%22%3E%3Cg%20transform%3D%22rotate%28-28%20260%20150%29%22%20font-family%3D%22Segoe%20UI%2CRoboto%2CArial%2Csans-serif%22%20font-weight%3D%22800%22%20text-anchor%3D%22middle%22%20fill%3D%22rgba%2829%2C42%2C34%2C0.075%29%22%3E%3Ctext%20x%3D%22260%22%20y%3D%22140%22%20font-size%3D%2234%22%20letter-spacing%3D%223%22%3EEM%20CONSTRU%C3%87%C3%83O%3C/text%3E%3Ctext%20x%3D%22260%22%20y%3D%22178%22%20font-size%3D%2217%22%20letter-spacing%3D%222%22%3EVERS%C3%83O%20DE%20TESTE%20%C2%B7%20DADOS%20PRELIMINARES%3C/text%3E%3C/g%3E%3C/svg%3E");background-repeat:repeat;background-position:center}
+  :root[data-tema="escuro"] .marca-construcao{background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22520%22%20height%3D%22300%22%3E%3Cg%20transform%3D%22rotate%28-28%20260%20150%29%22%20font-family%3D%22Segoe%20UI%2CRoboto%2CArial%2Csans-serif%22%20font-weight%3D%22800%22%20text-anchor%3D%22middle%22%20fill%3D%22rgba%28230%2C235%2C231%2C0.07%29%22%3E%3Ctext%20x%3D%22260%22%20y%3D%22140%22%20font-size%3D%2234%22%20letter-spacing%3D%223%22%3EEM%20CONSTRU%C3%87%C3%83O%3C/text%3E%3Ctext%20x%3D%22260%22%20y%3D%22178%22%20font-size%3D%2217%22%20letter-spacing%3D%222%22%3EVERS%C3%83O%20DE%20TESTE%20%C2%B7%20DADOS%20PRELIMINARES%3C/text%3E%3C/g%3E%3C/svg%3E")}
+  .faixa-construcao{background:repeating-linear-gradient(135deg,#BBDD00 0 14px,#1d2a22 14px 28px);height:6px}
+  .selo-construcao{display:inline-block;background:#BBDD00;color:#1d2a22;font-size:11.5px;font-weight:800;letter-spacing:.5px;border-radius:4px;padding:2px 8px;margin-left:8px;vertical-align:3px}
+  @media print{.marca-construcao{position:absolute}}
   footer{font-size:12.5px;color:var(--suave);text-align:center;margin-top:8px}
   .mapa-grade{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:18px}
   @media(max-width:900px){.mapa-grade{grid-template-columns:1fr}}
@@ -151,7 +157,7 @@
 <body>
 <header style="display:flex;justify-content:space-between;align-items:center;gap:12px">
   <div>
-    <h1>Higienização de Rede 2.0 · Ipasgo Saúde</h1>
+    <h1>Higienização de Rede 2.0 · Ipasgo Saúde <span class="selo-construcao" title="Estrutura em construção: os números são de bases de teste e mudam na versão final">EM CONSTRUÇÃO</span></h1>
     <p>Painel de acompanhamento · GERAS / COGER<span id="ref"></span></p>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
@@ -160,6 +166,8 @@
     <button type="button" id="sair" class="btn-cab" hidden>Sair</button>
   </div>
 </header>
+<div class="faixa-construcao" aria-hidden="true"></div>
+<div class="marca-construcao" aria-hidden="true"></div>
 <div id="telaLogin" class="login-wrap">
   <form id="formLogin" class="card login-card" autocomplete="on">
     <h2 style="margin-top:0">Acesso restrito</h2>

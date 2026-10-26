@@ -132,6 +132,19 @@ Para gerar a planilha a partir das 3 bases (faturamento, FACIL e BI CODER), rode
 python scripts\gerar_consolidado.py --faturamento FAT.csv --facil FACIL.csv --coder CODER.xlsx --saida dados\HIGIENIZACAO_REDE_CONSOLIDADA.xlsx --data-ref 2026-09-18
 ```
 
+## Marca "Em construção"
+
+Enquanto as bases definitivas de credenciamento e faturamento não chegam, o site mostra três sinais de versão de teste:
+- uma marca d'água diagonal, "EM CONSTRUÇÃO · VERSÃO DE TESTE · DADOS PRELIMINARES";
+- um selo no título;
+- uma faixa listrada abaixo do cabeçalho.
+
+Para a versão final, apague em `docs/index.html`:
+- o bloco de estilos que começa em `/* ---- marca d'água`;
+- as linhas `<div class="faixa-construcao">` e `<div class="marca-construcao">`;
+- o `<span class="selo-construcao">`;
+- o prefixo `[EM CONSTRUÇÃO]` do `<title>`.
+
 ## Ver localmente
 
 Abra `docs/index.html` no navegador. Funciona sem servidor.
